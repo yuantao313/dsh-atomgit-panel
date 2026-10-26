@@ -1,0 +1,24 @@
+# Local environment, including real OAuth credentials. The committed template
+# is .env.example; this file must never be tracked.
+.env
+.env.*
+!.env.example
+
+# Installed dependencies
+node_modules/
+
+# Build and log output
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor and OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local plugin state if it is ever copied next to the source
+state.json

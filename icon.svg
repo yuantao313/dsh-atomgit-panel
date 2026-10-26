@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36" fill="none" role="img" aria-label="AtomGit Sync">
+  <defs>
+    <linearGradient id="as-sync-track" x1="6" y1="30" x2="30" y2="6" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2F7BD6"/>
+      <stop offset="0.55" stop-color="#45B0E6"/>
+      <stop offset="1" stop-color="#57D2A5"/>
+    </linearGradient>
+    <linearGradient id="as-sync-node" x1="4" y1="28" x2="16" y2="34" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1F5FB4"/>
+      <stop offset="1" stop-color="#3E8FE0"/>
+    </linearGradient>
+  </defs>
+  <rect x="0.75" y="0.75" width="34.5" height="34.5" rx="9" fill="#0E1F33"/>
+  <rect x="0.75" y="0.75" width="34.5" height="34.5" rx="9" stroke="url(#as-sync-track)" stroke-opacity="0.55" stroke-width="1.5"/>
+  <path d="M11.5 26.5V13.5a3 3 0 0 1 3-3h9" stroke="url(#as-sync-track)" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M24.5 9.5v9a4 4 0 0 1-4 4h-9" stroke="url(#as-sync-track)" stroke-width="2.4" stroke-linecap="round" stroke-opacity="0.7"/>
+  <circle cx="11.5" cy="26.5" r="3.4" fill="url(#as-sync-node)"/>
+  <circle cx="11.5" cy="26.5" r="1.4" fill="#DCEBFB"/>
+  <circle cx="25" cy="9.5" r="3.4" fill="#57D2A5"/>
+  <circle cx="25" cy="9.5" r="1.4" fill="#0E1F33"/>
+  <path d="M22.9 20.8a4.2 4.2 0 1 1-1.4-3.2" stroke="#8FE3C2" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <path d="M21.2 15.6v2.6h2.6" stroke="#8FE3C2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

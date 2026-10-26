@@ -1,0 +1,61 @@
+{
+  "name": "dsh-atomgit-sync",
+  "version": "0.1.0",
+  "description": "AtomGit 工作台：令牌或 OAuth 登录，关注仓库，在右侧栏追踪 Issue 与 Pull Request。",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "cordis",
+    "atomgit",
+    "issues",
+    "pull-request",
+    "workbench"
+  ],
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://atomgit.com/yuantao_/dsh-atomgit-panel.git"
+  },
+  "homepage": "https://atomgit.com/yuantao_/dsh-atomgit-panel",
+  "scripts": {
+    "check": "node --check index.js && node --check client.js"
+  },
+  "bugs": {
+    "url": "https://atomgit.com/yuantao_/dsh-atomgit-panel/issues"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "AtomGit 工作台",
+    "description": "用个人访问令牌或 OAuth 登录 AtomGit，关注仓库，并在右侧栏追踪其 Issue 与 Pull Request。"
+  }
+}
