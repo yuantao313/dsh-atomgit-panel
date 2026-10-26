@@ -55,7 +55,7 @@ AtomGit 工作台把这些收进一个面板，每条一行，状态压缩成几
 
 不再混排。用「类型」切换，各看各的。
 
-另有「我参与」和时间窗筛选（1 / 24 / 168 小时）。
+筛选是一行四个下拉：类型、状态、相关人、更新（1 / 24 / 168 小时）。「相关人」的候选来自当前条目里真实出现的作者与指派，也可以直接输入名字。
 
 </td>
 <td valign="top">
@@ -133,7 +133,9 @@ dsh plugin --profile desktop add link:$(pwd)/dsh-atomgit-panel
 | **流水线** | 一条流水线一行，三个格子填「成功 / 运行中 / 失败」对应的 label。多条流水线就加多行 |
 | **评审** | 逐个添加评审 label，全部命中才算通过 |
 | **代码检视** | 勾选后启用。每个 PR 多一次请求，用来统计检视意见的已解决比例 |
-| **快捷评论** | 按钮名 + 评论内容，支持多行。例如 `L+A` → `/lgtm` 换行 `/approve` |
+| **快捷操作** | 一个按钮可以做三件事：发评论、加 label、删 label。例如 `L+A` → `/lgtm` 换行 `/approve`；`RDVOK` → 加 `RDV-SUCC` 并移除 `RDV-RUNNING`、`RDV-FAIL` |
+
+添加仓库时，如果仓库名能识别出社区（CANN、OpenHarmony），会按模板写好指示灯配置。模板只写入该仓库确实存在的 label，且只提示一次。
 
 ### 刷新
 
@@ -198,7 +200,7 @@ dsh plugin --profile desktop add link:$(pwd)/dsh-atomgit-panel
 
 **写操作只有两项**，都需要你在界面上主动点击：
 
-1. 按快捷评论发一条评论
+1. 按快捷操作发评论、增删 label
 2. 把某个 PR 的代码检视意见标记为已解决
 
 不会修改 label、不会合并、不会改 PR 状态。
@@ -243,7 +245,10 @@ Host 只开放 loopback 同源的 `/api/dsh-atomgit-panel/**`。
 | `GET /item?repo=&kind=&number=` | 单条正文与评论 |
 | `POST /refresh` | 强制刷新 |
 | `POST /repo-config` | 保存单仓库配置 |
-| `POST /comment` | 按快捷评论发评论 |
+| `POST /run-action` | 执行一个快捷操作组（评论 + label 增删） |
+| `POST /label` | 增删单个 label |
+| `GET /labels` | 仓库的 label 目录（供补全） |
+| `GET /templates` · `POST /apply-template` | 按社区推荐并套用指示灯模板 |
 | `POST /resolve` | 批量解决代码检视意见 |
 
 </details>
