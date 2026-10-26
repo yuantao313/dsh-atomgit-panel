@@ -1,0 +1,76 @@
+name: ci
+
+# 在开发分支与合并请求上跑检查，非 main 分支的成功推送才允许合并。
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Syntax
+        run: npm run check
+
+      - name: Tests
+        run: npm test
+
+      - name: Manifest sanity
+        run: |
+          # The client half loads under a module id equal to the package name, and
+          # credential records are scoped to it. All three must agree.
+          node <<'JS'
+          const fs = require('node:fs')
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+          const client = fs.readFileSync('client.js', 'utf8')
+          const host = fs.readFileSync('index.js', 'utf8')
+
+          const id = (client.match(/id:\s*'([^']+)'/) || [])[1]
+          if (id !== pkg.name) {
+            console.error(`client module id "${id}" != package name "${pkg.name}"`)
+            process.exit(1)
+          }
+
+          const keys = [...host.matchAll(/^const (?:TOKEN|REFRESH)_KEY = '([^']+)'/gm)].map((m) => m[1])
+          if (keys.length !== 2) {
+            console.error(`expected two credential keys, found ${keys.length}`)
+            process.exit(1)
+          }
+          for (const key of keys) {
+            if (key.split('/')[0] !== pkg.name) {
+              console.error(`credential scope of "${key}" is not the package name`)
+              process.exit(1)
+            }
+          }
+          console.log('manifest agrees: id, name and credential scope')
+          JS
+
+      - name: Required files
+        run: |
+          for f in index.js client.js cordis.patch.yml icon.svg README.md CHANGELOG.md LICENSE; do
+            test -f "$f" || { echo "::error::缺少 $f"; exit 1; }
+          done
+          echo "必备文件齐全"
