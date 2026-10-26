@@ -92,10 +92,10 @@ window.__ModuleLoader__.load({
       snapshotCache.set(repo, { at: Date.now(), value })
     }
 
-    const NS = 'atomgit-sync'
+    const NS = 'atomgit-panel'
     const TAB_KIND = 'atomgit'
-    const TAB_ID = 'atomgit-sync'
-    const SETTINGS_ID = 'atomgit-sync'
+    const TAB_ID = 'atomgit-panel'
+    const SETTINGS_ID = 'atomgit-panel'
     const ROUTE = 'api/dsh-atomgit-panel'
 
     const zh = {
@@ -534,7 +534,7 @@ window.__ModuleLoader__.load({
         textOverflow: 'ellipsis',
         minWidth: 0,
       },
-      headerMeta: { color: C.muted, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },      spinner: 'atomgit-sync-spin',
+      headerMeta: { color: C.muted, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },      spinner: 'atomgit-panel-spin',
       scroll: { flex: 'auto', minHeight: 0, overflowY: 'auto', padding: '8px 10px 16px' },
       stats: { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6, margin: '2px 0 8px' },
       stat: {
@@ -586,7 +586,7 @@ window.__ModuleLoader__.load({
                 ? C.warn
                 : `color-mix(in srgb, ${C.muted} 45%, transparent)`
         }`,
-        animation: state === 'RUNNING' ? 'atomgit-sync-pulse 1.2s ease-in-out infinite' : 'none',
+        animation: state === 'RUNNING' ? 'atomgit-panel-pulse 1.2s ease-in-out infinite' : 'none',
       }),
       rowMain: {
         display: 'flex',
@@ -786,7 +786,7 @@ window.__ModuleLoader__.load({
         {
           style: {
             display: 'inline-flex',
-            animation: spinning ? 'atomgit-sync-spin 900ms linear infinite' : 'none',
+            animation: spinning ? 'atomgit-panel-spin 900ms linear infinite' : 'none',
           },
         },
         h(Icon, null, h('path', { d: 'M13.5 8a5.5 5.5 0 1 1-1.9-4.15' }), h('path', { d: 'M13.6 2.6v3.6h-3.6' })),
@@ -954,7 +954,7 @@ window.__ModuleLoader__.load({
             deg === 0
               ? 'transparent'
               : `conic-gradient(${color} 0deg ${deg}deg, transparent ${deg}deg 360deg)`,
-          animation: state === 'RUNNING' ? 'atomgit-sync-pulse 1.2s ease-in-out infinite' : 'none',
+          animation: state === 'RUNNING' ? 'atomgit-panel-pulse 1.2s ease-in-out infinite' : 'none',
         },
       })
     }
@@ -2070,16 +2070,16 @@ window.__ModuleLoader__.load({
           const tag = document.createElement('style')
           tag.dataset.atomgitSync = 'spin'
           tag.textContent =
-            '@keyframes atomgit-sync-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}' +
-            '@keyframes atomgit-sync-pulse{0%,100%{opacity:1}50%{opacity:.25}}'
+            '@keyframes atomgit-panel-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}' +
+            '@keyframes atomgit-panel-pulse{0%,100%{opacity:1}50%{opacity:.25}}'
           document.head.appendChild(tag)
           return () => tag.remove()
         },
-        'atomgit-sync: styles',
+        'atomgit-panel: styles',
       )
 
-      ctx.effect(() => ctx.locale.register(NS, 'zh', zh), 'atomgit-sync: zh dictionary')
-      ctx.effect(() => ctx.locale.register(NS, 'en', en), 'atomgit-sync: en dictionary')
+      ctx.effect(() => ctx.locale.register(NS, 'zh', zh), 'atomgit-panel: zh dictionary')
+      ctx.effect(() => ctx.locale.register(NS, 'en', en), 'atomgit-panel: en dictionary')
 
       ctx.effect(
         () =>
@@ -2089,7 +2089,7 @@ window.__ModuleLoader__.load({
               SettingsPage,
             ),
           ),
-        'atomgit-sync: settings page',
+        'atomgit-panel: settings page',
       )
 
       let typeDispose = null
@@ -2114,7 +2114,7 @@ window.__ModuleLoader__.load({
           })
         } catch (error) {
           typeDispose = null
-          console.error('[atomgit-sync] sidebarRightTabs.register failed', error)
+          console.error('[atomgit-panel] sidebarRightTabs.register failed', error)
         }
       }
       ctx.effect(() => {
@@ -2126,7 +2126,7 @@ window.__ModuleLoader__.load({
           typeDispose = null
           if (typeof dispose === 'function') dispose()
         }
-      }, 'atomgit-sync: tab type')
+      }, 'atomgit-panel: tab type')
 
       /**
        * A work item's canonical page belongs to AtomGit, so it opens in the
@@ -2159,7 +2159,7 @@ window.__ModuleLoader__.load({
               h(Panel, { ...props, t, openInBrowser }),
             ),
           ),
-        'atomgit-sync: tab body',
+        'atomgit-panel: tab body',
       )
       ctx.effect(
         () =>
@@ -2173,14 +2173,14 @@ window.__ModuleLoader__.load({
               ),
             ),
           ),
-        'atomgit-sync: tab chip',
+        'atomgit-panel: tab chip',
       )
 
       ctx.effect(
         () =>
           ctx.slots.inject('conversation.session.header.utilities', () =>
             ctx.slots.register(
-              { name: 'conversation.session.header.utilities', id: 'atomgit-sync', order: 12, label: () => t('header.open') },
+              { name: 'conversation.session.header.utilities', id: 'atomgit-panel', order: 12, label: () => t('header.open') },
               () => {
                 const open = () => {
                   const sidebar = service('sidebarRight')
@@ -2215,7 +2215,7 @@ window.__ModuleLoader__.load({
               },
             ),
           ),
-        'atomgit-sync: header entry',
+        'atomgit-panel: header entry',
       )
     }
 

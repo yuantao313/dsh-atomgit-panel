@@ -6,5 +6,5 @@
 # Web GUI, where it contributes the right-sidebar tab type, its body and chip,
 # and a conversation-header entry.
 - insert:
-    - id: atomgit-sync
+    - id: atomgit-panel
       name: 'dsh-atomgit-panel'

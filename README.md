@@ -214,9 +214,11 @@ dsh plugin --profile desktop add link:$(pwd)/dsh-atomgit-panel
 
 | 项 | 位置 |
 | --- | --- |
-| 访问令牌 | DSH 凭据服务 `DSH_ATOMGIT_TOKEN` |
-| OAuth refresh token | DSH 凭据服务 `DSH_ATOMGIT_REFRESH` |
+| 访问令牌 | DSH 凭据服务记录 `dsh-atomgit-panel/token` |
+| OAuth refresh token | DSH 凭据服务记录 `dsh-atomgit-panel/refresh` |
 | 关注列表与配置 | `~/.dsh/dsh-atomgit-panel/state.json`（`0600`） |
+
+凭据记录名必须是 `<scope>/<id>` 两段，scope 为本插件的包名。写成别的形式时，写入不会报错，但下次启动解析凭据文档会失败。
 
 凭据只在本机。接口只返回掩码与登录名，不返回令牌原文。OAuth token 过期时由 Host 自动续期。
 

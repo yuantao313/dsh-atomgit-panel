@@ -18,7 +18,7 @@ import { randomBytes } from 'node:crypto'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-export const name = 'atomgit-sync'
+export const name = 'atomgit-panel'
 
 export const inject = ['webServer', 'tools']
 
@@ -38,8 +38,10 @@ const OAUTH_CLIENT_SECRET =
   String(process.env.DSH_ATOMGIT_OAUTH_CLIENT_SECRET ?? '').trim() || '575abd52cda84db389466b765c0fc9bd'
 const OAUTH_ENABLED = OAUTH_CLIENT_ID !== '' && OAUTH_CLIENT_SECRET !== ''
 
-const TOKEN_KEY = 'DSH_ATOMGIT_TOKEN'
-const REFRESH_KEY = 'DSH_ATOMGIT_REFRESH'
+// Credential records are addressed as `<scope>/<id>`, with the scope set to this
+// package's name.
+const TOKEN_KEY = 'dsh-atomgit-panel/token'
+const REFRESH_KEY = 'dsh-atomgit-panel/refresh'
 
 const HOME = process.env.DSH_HOME || join(homedir(), '.dsh')
 const DATA_DIR = join(HOME, 'dsh-atomgit-panel')
@@ -1394,7 +1396,7 @@ export function apply(ctx) {
     },
   }
 
-  ctx.effect(() => ctx.webServer.register(route), 'atomgit-sync: routes')
+  ctx.effect(() => ctx.webServer.register(route), 'atomgit-panel: routes')
 
   const toolDefinition = {
     name: 'atomgit_tracker',
@@ -1560,7 +1562,7 @@ export function apply(ctx) {
     },
   }
 
-  ctx.effect(() => ctx.tools.register(toolDefinition), 'atomgit-sync: tool')
+  ctx.effect(() => ctx.tools.register(toolDefinition), 'atomgit-panel: tool')
 }
 
 /* Kept for tooling that inspects exported state helpers. */
