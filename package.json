@@ -54,6 +54,7 @@
   },
   "homepage": "https://atomgit.com/yuantao_/dsh-atomgit-panel",
   "scripts": {
+    "test": "node --test test/",
     "check": "node --check index.js && node --check client.js"
   },
   "bugs": {

@@ -191,9 +191,12 @@ function parseRepoSpec(input) {
 }
 
 /** Short, non-reversible display form of a stored token. */
+/** Display form of a stored token: eight dots and its last four characters. */
 function maskToken(token) {
   if (typeof token !== 'string' || token === '') return ''
-  const tail = token.slice(-4)
+  // A short value would otherwise appear in full, so only a token longer than
+  // the visible tail gets one.
+  const tail = token.length > 8 ? token.slice(-4) : ''
   return `${'•'.repeat(8)}${tail}`
 }
 
@@ -1638,4 +1641,4 @@ export function apply(ctx) {
 }
 
 /* Kept for tooling that inspects exported state helpers. */
-export { maskToken, parseRepoSpec, normalizeState }
+export { maskToken, parseRepoSpec, normalizeState, normalizeLights, pipelineLight, reviewLight, normalizeQuickActions }
