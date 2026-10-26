@@ -141,17 +141,29 @@ function repoKey(owner, repo) {
 }
 
 /** A quick action is a caption plus the exact comment it posts. */
+/**
+ * One shortcut button: a caption plus the operations it performs in order —
+ * a comment, labels to add, labels to remove.
+ */
 function normalizeQuickActions(value) {
   if (!Array.isArray(value)) return []
   const out = []
   const seen = new Set()
-  for (const raw of value.slice(0, 12)) {
+  const names = (list) =>
+    (Array.isArray(list) ? list : [])
+      .map((entry) => str(entry, 80).trim())
+      .filter((entry) => entry !== '')
+      .slice(0, 8)
+  for (const raw of value.slice(0, 16)) {
     const record = asRecord(raw) ?? {}
     const key = str(record.key, 16).trim()
+    if (key === '' || seen.has(key)) continue
     const body = str(record.body, 400).trim()
-    if (key === '' || body === '' || seen.has(key)) continue
+    const add = names(record.add)
+    const remove = names(record.remove)
+    if (body === '' && add.length === 0 && remove.length === 0) continue
     seen.add(key)
-    out.push({ key, body })
+    out.push({ key, body, add, remove })
   }
   return out
 }
@@ -1052,6 +1064,131 @@ export function apply(ctx) {
     return { ok: true, body: text }
   }
 
+  /**
+   * Add or remove one label on an issue or pull request.
+   *
+   * Adding posts the name to the labels endpoint. Removing reads the current
+   * labels first and rewrites the set without the name, because pull requests
+   * only offer a whole-set replacement.
+   */
+  async function toggleLabel(entry, kind, number, name, add) {
+    if (kind !== 'issue' && kind !== 'pr') {
+      return { ok: false, error: { code: 'bad-kind', message: 'kind must be "issue" or "pr"' } }
+    }
+    if (!Number.isFinite(number) || number <= 0) {
+      return { ok: false, error: { code: 'bad-number', message: 'number must be a positive integer' } }
+    }
+    const label = str(name, 80).trim()
+    if (label === '') {
+      return { ok: false, error: { code: 'empty-label', message: 'The label name is empty.' } }
+    }
+    const token = await readSecret(TOKEN_KEY)
+    if (token === null) {
+      return { ok: false, error: { code: 'unauthorized', message: 'Sign in before changing a label.' } }
+    }
+    const base = kind === 'issue' ? 'issues' : 'pulls'
+    const itemPath = `/${base}/${number}`
+
+    if (add) {
+      const result = await mutateJson(repoUrl(entry.owner, entry.repo, `${itemPath}/labels`), token, 'POST', [label])
+      if (result.ok !== true) return result
+      snapshots.delete(repoKey(entry.owner, entry.repo))
+      return { ok: true, action: 'added', label }
+    }
+
+    // Removal: pull requests replace the whole set, issues delete by name.
+    if (kind === 'issue') {
+      const result = await mutateJson(
+        repoUrl(entry.owner, entry.repo, `${itemPath}/labels/${encodeURIComponent(label)}`),
+        token,
+        'DELETE',
+        null,
+      )
+      if (result.ok !== true) return result
+      snapshots.delete(repoKey(entry.owner, entry.repo))
+      return { ok: true, action: 'removed', label }
+    }
+
+    let current
+    try {
+      current = await requestJson(
+        repoUrl(entry.owner, entry.repo, `${itemPath}/labels`),
+        token,
+        AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      )
+    } catch (error) {
+      return { ok: false, error: { code: 'read-failed', message: errorText(error) } }
+    }
+    const names = (Array.isArray(current) ? current : [])
+      .map((raw) => str(asRecord(raw)?.name, 80))
+      .filter((value) => value !== '' && value.toLowerCase() !== label.toLowerCase())
+    const result = await mutateJson(repoUrl(entry.owner, entry.repo, `${itemPath}/labels`), token, 'PUT', names)
+    if (result.ok !== true) return result
+    snapshots.delete(repoKey(entry.owner, entry.repo))
+    return { ok: true, action: 'removed', label }
+  }
+
+  /**
+   * Run a shortcut's operations on one item: comment, then labels to add, then
+   * labels to remove.
+   *
+   * Every step is attempted; the reply lists what succeeded and what did not, so
+   * a partial result is visible rather than silently swallowed.
+   */
+  async function runQuickAction(entry, kind, number, action) {
+    const done = []
+    const failed = []
+    if (action.body !== '') {
+      const result = await postComment(entry, kind, number, action.body)
+      if (result.ok === true) done.push('comment')
+      else failed.push({ step: 'comment', error: result.error })
+    }
+    for (const label of action.add ?? []) {
+      const result = await toggleLabel(entry, kind, number, label, true)
+      if (result.ok === true) done.push(`+${label}`)
+      else failed.push({ step: `+${label}`, error: result.error })
+    }
+    for (const label of action.remove ?? []) {
+      const result = await toggleLabel(entry, kind, number, label, false)
+      if (result.ok === true) done.push(`-${label}`)
+      else failed.push({ step: `-${label}`, error: result.error })
+    }
+    return { ok: failed.length === 0, action: action.key, done, failed }
+  }
+
+  /** One authenticated write that does not return a body worth reading. */
+  async function mutateJson(url, token, method, payload) {
+    let response
+    try {
+      response = await fetch(url, {
+        method,
+        headers: {
+          accept: 'application/json',
+          ...(payload === null ? {} : { 'content-type': 'application/json' }),
+          'PRIVATE-TOKEN': token,
+        },
+        ...(payload === null ? {} : { body: JSON.stringify(payload) }),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      })
+    } catch (error) {
+      return { ok: false, error: { code: 'network', message: errorText(error) } }
+    }
+    if (response.status === 401) return { ok: false, error: { code: 'unauthorized', message: 'AtomGit rejected the token (401).' } }
+    if (response.status === 403) return { ok: false, error: { code: 'forbidden', message: 'AtomGit refused the change (403).' } }
+    if (response.status === 404) return { ok: false, error: { code: 'not-found', message: 'Item or label not found (404).' } }
+    if (!response.ok) {
+      let detail = ''
+      try {
+        const body = asRecord(await response.json())
+        detail = str(body?.message ?? body?.error_message, 200)
+      } catch {
+        /* no body to explain it */
+      }
+      return { ok: false, error: { code: 'http', message: detail || `AtomGit answered HTTP ${response.status}` } }
+    }
+    return { ok: true }
+  }
+
   /** The address AtomGit redirects back to. */
   function callbackUrl() {
     if (callbackPort !== null) return `http://127.0.0.1:${callbackPort}${CALLBACK_PATH}`
@@ -1629,6 +1766,34 @@ export function apply(ctx) {
         if (method === 'POST' && path === '/repo-config') {
           const body = await readJson(req)
           sendJson(res, 200, await setRepoConfig(body.repo, { lights: body.lights, actions: body.actions }))
+          return
+        }
+
+        if (method === 'POST' && path === '/run-action') {
+          const body = await readJson(req)
+          const entry = resolveRepo(str(body.repo, 250) || null)
+          if (entry === null) {
+            sendJson(res, 200, { ok: false, error: { code: 'no-repository', message: 'No watched repository is selected.' } })
+            return
+          }
+          const action = (entry.actions ?? []).find((row) => row.key === str(body.action, 16))
+          if (action === undefined) {
+            sendJson(res, 200, { ok: false, error: { code: 'unknown-action', message: 'No such quick action.' } })
+            return
+          }
+          sendJson(res, 200, await runQuickAction(entry, str(body.kind, 10), Number(body.number), action))
+          return
+        }
+
+        if (method === 'POST' && path === '/label') {
+          const body = await readJson(req)
+          const entry = resolveRepo(str(body.repo, 250) || null)
+          if (entry === null) {
+            sendJson(res, 200, { ok: false, error: { code: 'no-repository', message: 'No watched repository is selected.' } })
+            return
+          }
+          const add = body.add === true
+          sendJson(res, 200, await toggleLabel(entry, str(body.kind, 10), Number(body.number), str(body.label, 80), add))
           return
         }
 
