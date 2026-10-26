@@ -1,0 +1,64 @@
+name: mirror-to-atomgit
+
+# AtomGit 是主仓，这个工作流把 GitHub 上的推送转成对 AtomGit 的推送。
+# 只在 GitHub 仓库本身收到推送时运行；由本工作流产生的推送不会再触发它，
+# 因为目标远端是 AtomGit，不产生 GitHub 的 push 事件。
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: mirror-to-atomgit
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Push branch and tags to AtomGit
+        env:
+          ATOMGIT_TOKEN: ${{ secrets.ATOMGIT_TOKEN }}
+          ATOMGIT_USER: ${{ secrets.ATOMGIT_USER }}
+        run: |
+          if [ -z "$ATOMGIT_TOKEN" ] || [ -z "$ATOMGIT_USER" ]; then
+            echo "::error::缺少 ATOMGIT_TOKEN 或 ATOMGIT_USER secret"
+            exit 1
+          fi
+          remote="https://${ATOMGIT_USER}:${ATOMGIT_TOKEN}@atomgit.com/${ATOMGIT_USER}/dsh-atomgit-panel.git"
+          set +x
+
+          # git redacts the credential from its own messages, and the token is
+          # filtered out of anything else before it reaches the log.
+          #
+          # The pipe to sed would otherwise make `if` read sed's status instead
+          # of git's, so every push would appear to succeed.
+          mask() { sed -E 's#'"${ATOMGIT_TOKEN}"'#***#g'; }
+          push() {
+            set -o pipefail
+            git push --force "$remote" "$@" 2>&1 | mask
+            local status=$?
+            set +o pipefail
+            return $status
+          }
+
+          if ! push "HEAD:refs/heads/main"; then
+            echo "::error::推送到 AtomGit 的 main 失败"
+            exit 1
+          fi
+
+          for tag in $(git tag --points-at HEAD); do
+            if ! push "refs/tags/${tag}:refs/tags/${tag}"; then
+              echo "::error::推送标签 ${tag} 失败"
+              exit 1
+            fi
+          done
