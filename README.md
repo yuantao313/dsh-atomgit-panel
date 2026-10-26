@@ -255,3 +255,5 @@ OAuth 回调走固定端口，与 GUI 端口无关 —— GUI 端口由系统分
 ## 许可
 
 [MIT](./LICENSE)
+
+变更记录见 [CHANGELOG.md](./CHANGELOG.md)。

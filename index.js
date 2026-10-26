@@ -50,6 +50,8 @@ const DATA_DIR = join(HOME, 'dsh-atomgit-panel')
 const STATE_FILE = join(DATA_DIR, 'state.json')
 
 const MAX_ITEMS = 60
+/** How many code-review reads may be in flight at once. */
+const REVIEW_CONCURRENCY = 6
 const MAX_ACTIVITY = 300
 const REQUEST_TIMEOUT_MS = 20000
 const MAX_BODY_BYTES = 256 * 1024
@@ -80,32 +82,6 @@ function repoKey(owner, repo) {
   return `${owner}/${repo}`
 }
 
-/**
- * Display rules for labels that already exist on an item: a short caption and a
- * signal kind. Purely presentational — the plugin never adds, removes or
- * changes a label on AtomGit.
- */
-function normalizeLabelRules(value) {
-  if (!Array.isArray(value)) return []
-  const out = []
-  const seen = new Set()
-  for (const raw of value.slice(0, 24)) {
-    const record = asRecord(raw) ?? {}
-    const name = str(record.name, 80).trim()
-    if (name === '' || seen.has(name)) continue
-    seen.add(name)
-    const kind = ['ci', 'review', 'approval', 'check', 'custom'].includes(record.kind) ? record.kind : 'custom'
-    out.push({
-      name,
-      label: str(record.label, 40).trim() || name,
-      kind,
-      // A CI label that says "running" (rather than passed or failed) pulses.
-      pending: record.pending === true,
-    })
-  }
-  return out
-}
-
 /** A quick action is a caption plus the exact comment it posts. */
 function normalizeQuickActions(value) {
   if (!Array.isArray(value)) return []
@@ -122,7 +98,6 @@ function normalizeQuickActions(value) {
   return out
 }
 
-const LIGHT_SLOTS = ['pipeline', 'review']
 const LIGHT_STATES = ['SUCCESS', 'RUNNING', 'FAILURE']
 /** Worst wins: a failure outranks something still running, which outranks success. */
 const LIGHT_RANK = { SUCCESS: 1, RUNNING: 2, FAILURE: 3 }
@@ -860,32 +835,45 @@ export function apply(ctx) {
     let discussionBudget = reuseReview ? 0 : rules.discussions === true ? discussionLimit : 0
     const token = reuseReview ? null : await readSecret(TOKEN_KEY)
 
-    const items = []
-    for (const item of current.items) {
-      const names = item.labels.map((label) => label.name)
-      let discussions = null
-      if (
-        discussionBudget > 0 &&
-        item.kind === 'pr' &&
-        item.state === 'open' &&
-        token !== null
-      ) {
-        discussionBudget -= 1
+    // The per-pull-request review reads are independent, so they run in a small
+    // pool instead of one after another.
+    const reviewTargets = []
+    if (discussionBudget > 0) {
+      for (const item of current.items) {
+        if (reviewTargets.length >= discussionBudget) break
+        if (item.kind === 'pr' && item.state === 'open') reviewTargets.push(item.number)
+      }
+    }
+    const reviewByNumber = new Map()
+    let cursor = 0
+    const workers = Array.from({ length: Math.min(REVIEW_CONCURRENCY, reviewTargets.length) }, async () => {
+      for (;;) {
+        const index = cursor
+        cursor += 1
+        if (index >= reviewTargets.length) return
+        const number = reviewTargets[index]
         try {
-          discussions = await codeReviewOf(entry, item.number, token)
+          reviewByNumber.set(number, await codeReviewOf(entry, number, token))
         } catch {
-          discussions = null
+          reviewByNumber.set(number, null)
         }
       }
-      items.push({
+    })
+    await Promise.all(workers)
+
+    const items = current.items.map((item) => {
+      const names = item.labels.map((label) => label.name)
+      return {
         ...item,
         lights: {
           pipeline: pipelineLight(names, rules.pipeline),
           review: reviewLight(names, rules.review),
         },
-        discussions: reuseReview ? previousByItem.get(`${item.kind}:${item.number}`) ?? null : discussions,
-      })
-    }
+        discussions: reuseReview
+          ? previousByItem.get(`${item.kind}:${item.number}`) ?? null
+          : reviewByNumber.get(item.number) ?? null,
+      }
+    })
     // Cache the ratios alongside the items they describe, so the next cache hit
     // has them without asking AtomGit again.
     if (items.some((item) => item.discussions !== null && item.discussions !== undefined)) {
