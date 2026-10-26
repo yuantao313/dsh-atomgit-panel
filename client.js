@@ -140,6 +140,8 @@ window.__ModuleLoader__.load({
       'panel.noActive': '还没有选择仓库',
       'panel.repoSwitch': '切换仓库',
       'panel.refresh': '刷新',
+      'panel.refreshing': '正在刷新',
+      'panel.kind': '类型',
       'panel.updated': '更新于 {time}',
       'time.justNow': '刚刚更新',
       'panel.openOnAtomGit': '在 AtomGit 打开',
@@ -187,17 +189,11 @@ window.__ModuleLoader__.load({
       'lamp.hint.review': '评审 label',
       'lamp.reviewEmpty': '还没有评审 label，点「添加」新建一条。',
       'lamp.reviewAdd': '添加评审 label',
-      'tpl.title': '模板',
-      'tpl.loading': '正在读取仓库 label…',
-      'tpl.recommended': '推荐',
-      'tpl.preview': '看模式',
-      'tpl.hide': '收起',
-      'tpl.apply': '套用',
-      'tpl.missing': '缺 {n} 个 label',
-      'tpl.shape': '将写入的模式',
-      'tpl.noReview': '不设评审',
-      'tpl.skipped': '该仓库没有、会被跳过',
-      'tpl.applyHint': '套用只写入本仓库确实存在的 label；已有的快捷评论会保留。',
+      'tpl.recommend': '检测到 {name} 社区，可一键设置指示灯',
+      'tpl.recommendShape': '可用 {name} 的指示灯配置',
+      'tpl.apply': '一键设置',
+      'tpl.willWrite': '设置后',
+      'tpl.noReview': '不设评审灯',
       'lamp.discussions': '代码检视',
       'lamp.discussionsNone': '代码检视',
       'lamp.discussionsClean': '无未解决项',
@@ -269,6 +265,7 @@ window.__ModuleLoader__.load({
       'panel.noActive': 'No repository selected',
       'panel.repoSwitch': 'Switch repository',
       'panel.refresh': 'Refresh',
+      'panel.refreshing': 'Refreshing',
       'panel.updated': 'Updated {time}',
       'time.justNow': 'just now',
       'panel.openOnAtomGit': 'Open on AtomGit',
@@ -317,17 +314,11 @@ window.__ModuleLoader__.load({
       'lamp.hint.review': 'review label',
       'lamp.reviewEmpty': 'No review label yet. Press Add to create one.',
       'lamp.reviewAdd': 'Add review label',
-      'tpl.title': 'Templates',
-      'tpl.loading': 'Reading repository labels…',
-      'tpl.recommended': 'Suggested',
-      'tpl.preview': 'Show pattern',
-      'tpl.hide': 'Hide',
-      'tpl.apply': 'Apply',
-      'tpl.missing': '{n} label(s) missing',
-      'tpl.shape': 'Pattern that will be written',
-      'tpl.noReview': 'no review labels',
-      'tpl.skipped': 'Absent here, will be skipped',
-      'tpl.applyHint': 'Only labels this repository has are written; existing quick comments are kept.',
+      'tpl.recommend': 'Looks like {name} — set the lamps in one click',
+      'tpl.recommendShape': 'The {name} lamp layout fits here',
+      'tpl.apply': 'Set up',
+      'tpl.willWrite': 'After setup',
+      'tpl.noReview': 'no review lamp',
       'lamp.discussions': 'Code review',
       'lamp.discussionsNone': 'Code review',
       'lamp.discussionsClean': 'nothing unresolved',
@@ -522,22 +513,8 @@ window.__ModuleLoader__.load({
         gap: 3,
         background: C.base,
       },
-      templateTag: {
-        fontSize: 9.5,
-        fontWeight: 700,
-        color: C.brand,
-        border: `0.5px solid ${C.brand}`,
-        borderRadius: 999,
-        padding: '0 5px',
-        lineHeight: '13px',
-        flex: 'none',
-      },
-      templateBody: { display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 2 },
-      templateShape: {
-        fontSize: 10.5,
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-        color: C.text,
-      },
+
+
       tagCloud: { display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' },
       tagChip: {
         display: 'inline-flex',
@@ -1429,108 +1406,62 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Preset layouts for the repository being edited.
+     * The single preset that fits this repository, if any.
      *
-     * A template is shown with the shape it would install, so the choice is made
-     * on the pattern rather than on a name. Only templates whose labels exist in
-     * this repository can be applied.
+     * It appears only when the repository's own labels satisfy it, and states
+     * the lamps it would install before anything is written.
      */
-    function TemplatePicker({ repo, t, onApplied }) {
-      const [templates, setTemplates] = useState(null)
-      const [open, setOpen] = useState(null)
-      const [busy, setBusy] = useState(null)
+    function TemplateHint({ repo, t, onApplied }) {
+      const [hint, setHint] = useState(null)
+      const [busy, setBusy] = useState(false)
 
       useEffect(() => {
         let alive = true
-        setTemplates(null)
+        setHint(null)
         callApi(`/templates?repo=${encodeURIComponent(repo)}`).then((result) => {
-          if (!alive) return
-          setTemplates(result?.ok === true ? result.templates : [])
+          if (alive) setHint(result?.ok === true ? result.recommendation : null)
         })
         return () => {
           alive = false
         }
       }, [repo])
 
-      const apply = async (template) => {
-        setBusy(template.id)
+      if (hint === null || hint.missing.length > 0) return null
+
+      const apply = async () => {
+        setBusy(true)
         try {
-          const result = await postJson('/apply-template', { repo, template: template.id })
-          if (result?.ok === true) {
-            setOpen(null)
-            onApplied()
-          }
+          const result = await postJson('/apply-template', { repo, template: hint.id })
+          if (result?.ok === true) onApplied()
         } finally {
-          setBusy(null)
+          setBusy(false)
         }
       }
 
-      if (templates === null) return h('div', { style: { fontSize: 10.5, color: C.muted } }, t('tpl.loading'))
-      if (templates.length === 0) return null
-
-      const shape = (template) => {
-        const rows = template.lights.pipeline
-          .map((row) => `${row.SUCCESS.join('/') || '—'} · ${row.RUNNING.join('/') || '—'} · ${row.FAILURE.join('/') || '—'}`)
-        const review = template.lights.review.length > 0 ? template.lights.review.join(' + ') : t('tpl.noReview')
-        return { rows, review }
-      }
+      const part = (names) => (names.length > 0 ? names.join(', ') : '—')
+      const rows = hint.lights.pipeline.map(
+        (row) =>
+          `${t('lamp.state.SUCCESS')} ${part(row.SUCCESS)} · ${t('lamp.state.RUNNING')} ${part(row.RUNNING)} · ${t('lamp.state.FAILURE')} ${part(row.FAILURE)}`,
+      )
+      const review = hint.lights.review.length > 0 ? hint.lights.review.join(' + ') : t('tpl.noReview')
 
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }, 'data-atomgit-templates': '1' },
-        h('div', { style: { ...S.label, fontWeight: 700 } }, t('tpl.title')),
-        templates.map((template) => {
-          const parts = shape(template)
-          const usable = template.missing.length === 0
-          const expanded = open === template.id
-          return h(
-            'div',
-            { key: template.id, style: S.templateRow, 'data-atomgit-template': template.id },
-            h(
-              'div',
-              { style: { display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexWrap: 'wrap' } },
-              h('span', { style: { fontWeight: 700, fontSize: 11.5 } }, template.name),
-              template.suggested
-                ? h('span', { style: S.templateTag }, t('tpl.recommended'))
-                : null,
-              h('span', { style: { fontSize: 10.5, color: C.muted, minWidth: 0 } }, template.description),
-              h(
-                'span',
-                { style: { marginLeft: 'auto', display: 'inline-flex', gap: 4, flex: 'none' } },
-                h(Btn, { onClick: () => setOpen(expanded ? null : template.id) }, expanded ? t('tpl.hide') : t('tpl.preview')),
-                usable
-                  ? h(Btn, {
-                      variant: 'primary',
-                      disabled: busy !== null,
-                      onClick: () => apply(template),
-                    }, busy === template.id ? t('common.saving') : t('tpl.apply'))
-                  : h('span', { style: { fontSize: 10, color: C.muted, alignSelf: 'center' } },
-                      t('tpl.missing').replace('{n}', String(template.missing.length))),
-              ),
-            ),
-            expanded
-              ? h(
-                  'div',
-                  { style: S.templateBody },
-                  h('div', { style: { ...S.label, marginTop: 2 } }, t('tpl.shape')),
-                  parts.rows.map((line, index) =>
-                    h('div', { key: index, style: S.templateShape },
-                      `${t('settings.pipeline')} ${index + 1}: ${line}`),
-                  ),
-                  h('div', { style: S.templateShape }, `${t('lamp.review')}: ${parts.review}`),
-                  template.recommended.length > 0
-                    ? h('div', { style: S.templateShape },
-                        `${t('settings.quickActions')}: ${template.recommended.map((a) => `${a.key} → ${a.body.replace('\n', ' + ')}`).join('  ·  ')}`)
-                    : null,
-                  template.missing.length > 0
-                    ? h('div', { style: { ...S.templateShape, color: C.warn } },
-                        `${t('tpl.skipped')}: ${template.missing.join(', ')}`)
-                    : null,
-                  h('div', { style: { ...S.templateShape, color: C.muted } }, t('tpl.applyHint')),
-                )
-              : null,
-          )
-        }),
+        { style: S.templateRow, 'data-atomgit-template': hint.id },
+        h(
+          'div',
+          { style: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' } },
+          h(
+            'span',
+            { style: { fontWeight: 700, fontSize: 11.5 } },
+            t(hint.byName === true ? 'tpl.recommend' : 'tpl.recommendShape').replace('{name}', hint.name),
+          ),
+          h('span', { style: { marginLeft: 'auto', flex: 'none' } },
+            h(Btn, { variant: 'primary', disabled: busy, onClick: apply }, busy ? t('common.saving') : t('tpl.apply'))),
+        ),
+        h('div', { style: { ...S.label, marginTop: 2 } }, t('tpl.willWrite')),
+        rows.map((line, index) => h('div', { key: index, style: S.templateShape }, line)),
+        h('div', { style: S.templateShape }, `${t('lamp.review')}: ${review}`),
       )
     }
 
@@ -1944,12 +1875,12 @@ window.__ModuleLoader__.load({
                             onClick: () => removeRepo(entry.key),
                           }, t('settings.repoRemove')),
                         ),
-                        h(TemplatePicker, {
+                        h(TemplateHint, {
                           repo: entry.key,
                           t,
                           onApplied: () => {
                             // Re-read the repository config, then remount the editor
-                            // so its fields show what the template wrote.
+                            // so its fields show what was written.
                             Promise.resolve(load()).then(() => setEditorEpoch((n) => n + 1))
                           },
                         }),

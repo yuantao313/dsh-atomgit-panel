@@ -39,7 +39,6 @@ const LABEL_TEMPLATES = [
   {
     id: 'cann',
     name: 'CANN',
-    description: 'CANN 社区：CLA、检视与两条流水线',
     match: /(^|\/)cann($|\/)|^cann-/i,
     lights: {
       pipeline: [
@@ -48,16 +47,10 @@ const LABEL_TEMPLATES = [
       ],
       review: ['lgtm', 'approved'],
     },
-    recommended: [
-      { key: 'L', body: '/lgtm' },
-      { key: 'A', body: '/approve' },
-      { key: 'L+A', body: '/lgtm\n/approve' },
-    ],
   },
   {
     id: 'openharmony',
     name: 'OpenHarmony',
-    description: 'OpenHarmony 社区：流水线三件套（该社区无 lgtm/approved）',
     match: /^openharmony\//i,
     lights: {
       pipeline: [
@@ -65,24 +58,36 @@ const LABEL_TEMPLATES = [
       ],
       review: [],
     },
-    recommended: [],
-  },
-  {
-    id: 'generic',
-    name: '通用',
-    description: '只有流水线三件套，适用于任意使用该命名的仓库',
-    match: null,
-    lights: {
-      pipeline: [
-        { SUCCESS: ['ci-pipeline-passed'], RUNNING: ['ci-pipeline-running'], FAILURE: ['ci-pipeline-failed'] },
-      ],
-      review: [],
-    },
-    recommended: [],
   },
 ]
 
-// Fixed loopback port for OAuth redirects.
+/**
+ * Pick at most one template for a repository: the one whose name matches, or
+ * else the one whose labels the repository actually carries.
+ */
+function chooseTemplate(key, names) {
+  const present = new Set((names ?? []).map((name) => name.toLowerCase()))
+  const score = (template) => {
+    const required = [
+      ...template.lights.pipeline.flatMap((row) => [...row.SUCCESS, ...row.RUNNING, ...row.FAILURE]),
+      ...template.lights.review,
+    ]
+    if (required.length === 0) return 0
+    return required.filter((name) => present.has(name.toLowerCase())).length / required.length
+  }
+  // The community name decides which template is named. Labels alone only say
+  // "these lamps fit", not "this is that community's convention".
+  const named = LABEL_TEMPLATES.find((template) => template.match !== null && template.match.test(str(key, 250)))
+  if (named !== undefined) return { template: named, byName: true }
+  let best = null
+  for (const template of LABEL_TEMPLATES) {
+    const value = score(template)
+    if (best === null || value > best.score) best = { template, score: value }
+  }
+  return best !== null && best.score >= 0.9 ? { template: best.template, byName: false } : null
+}
+
+// Fixed loopback port for OAuth redirects.// Fixed loopback port for OAuth redirects.
 const OAUTH_PORT_FALLBACK = 45821
 const ACCOUNT_URL = `${WEB_HOST}/setting`
 
@@ -1269,6 +1274,31 @@ export function apply(ctx) {
     }
   }
 
+  /**
+   * Write a template's labels into a repository's configuration.
+   *
+   * Only labels the repository actually carries are written; a pipeline row with
+   * no usable label is dropped.
+   */
+  async function applyTemplate(template, entry) {
+    const catalogue = await labelCatalogue(entry)
+    const present = new Set(catalogue.map((label) => label.name.toLowerCase()))
+    const keep = (name) => present.has(name.toLowerCase())
+    const lights = {
+      pipeline: template.lights.pipeline
+        .map((row) => ({
+          SUCCESS: row.SUCCESS.filter(keep),
+          RUNNING: row.RUNNING.filter(keep),
+          FAILURE: row.FAILURE.filter(keep),
+        }))
+        .filter((row) => row.SUCCESS.length + row.RUNNING.length + row.FAILURE.length > 0),
+      review: template.lights.review.filter(keep),
+      discussions: entry.lights?.discussions === true,
+    }
+    const result = await setRepoConfig(repoKey(entry.owner, entry.repo), { lights })
+    return { ...result, applied: template.id }
+  }
+
   async function addRepo(spec) {
     const parsed = parseRepoSpec(spec)
     if (parsed === null) {
@@ -1294,7 +1324,24 @@ export function apply(ctx) {
     state.watched = [...state.watched, { ...parsed, addedAt: new Date().toISOString() }]
     state.active = key
     await saveState()
-    return { ok: true, key, added: true, state: publicState() }
+
+    // A newly watched repository with a recognisable name gets its label layout
+    // filled in, so the panel shows useful lamps without further setup.
+    const entry = state.watched.find((row) => repoKey(row.owner, row.repo) === key)
+    let applied = null
+    if (entry !== undefined) {
+      try {
+        const catalogue = await labelCatalogue(entry)
+        const choice = chooseTemplate(key, catalogue.map((label) => label.name))
+        if (choice !== null && choice.byName) {
+          const result = await applyTemplate(choice.template, entry)
+          if (result.ok === true) applied = { id: choice.template.id, name: choice.template.name }
+        }
+      } catch {
+        applied = null
+      }
+    }
+    return { ok: true, key, added: true, applied, state: publicState() }
   }
 
   async function removeRepo(spec) {
@@ -1497,47 +1544,44 @@ export function apply(ctx) {
 
         if (method === 'GET' && path === '/templates') {
           const entry = resolveRepo(url.searchParams.get('repo'))
-          const key = entry === null ? '' : repoKey(entry.owner, entry.repo)
-          // A template is offered when the repository's own catalogue carries its
-          // labels, so applying one never writes a name AtomGit does not know.
-          let catalogue = []
-          if (entry !== null) {
-            try {
-              catalogue = await labelCatalogue(entry)
-            } catch {
-              catalogue = []
-            }
+          if (entry === null) {
+            sendJson(res, 200, { ok: true, recommendation: null })
+            return
           }
-          const present = new Set(catalogue.map((label) => label.name.toLowerCase()))
-          const templates = LABEL_TEMPLATES.map((template) => {
-            const required = [
-              ...template.lights.pipeline.flatMap((row) => [...row.SUCCESS, ...row.RUNNING, ...row.FAILURE]),
-              ...template.lights.review,
-            ]
-            const available = required.filter((name) => present.has(name.toLowerCase()))
-            return {
-              id: template.id,
-              name: template.name,
-              description: template.description,
-              score: required.length === 0 ? 0 : available.length / required.length,
-              suggested: template.match !== null && template.match.test(key),
-              available,
-              missing: required.filter((name) => !present.has(name.toLowerCase())),
-              lights: template.lights,
-              recommended: template.recommended,
-            }
+          const key = repoKey(entry.owner, entry.repo)
+          let catalogue = []
+          try {
+            catalogue = await labelCatalogue(entry)
+          } catch {
+            catalogue = []
+          }
+          const choice = chooseTemplate(key, catalogue.map((label) => label.name))
+          sendJson(res, 200, {
+            ok: true,
+            repo: key,
+            recommendation:
+              choice === null
+                ? null
+                : {
+                    id: choice.template.id,
+                    name: choice.template.name,
+                    byName: choice.byName,
+                    lights: choice.template.lights,
+                    missing: [
+                      ...choice.template.lights.pipeline.flatMap((row) => [
+                        ...row.SUCCESS,
+                        ...row.RUNNING,
+                        ...row.FAILURE,
+                      ]),
+                      ...choice.template.lights.review,
+                    ].filter((name) => !catalogue.some((label) => label.name.toLowerCase() === name.toLowerCase())),
+                  },
           })
-          sendJson(res, 200, { ok: true, repo: key, templates })
           return
         }
 
         if (method === 'POST' && path === '/apply-template') {
           const body = await readJson(req)
-          const template = LABEL_TEMPLATES.find((row) => row.id === str(body.template, 40))
-          if (template === undefined) {
-            sendJson(res, 200, { ok: false, error: { code: 'unknown-template', message: 'No such template.' } })
-            return
-          }
           const spec = str(body.repo, 250) || null
           const parsed = parseRepoSpec(spec ?? state.active ?? '')
           if (parsed === null) {
@@ -1549,38 +1593,16 @@ export function apply(ctx) {
             sendJson(res, 200, { ok: false, error: { code: 'not-watched', message: 'That repository is not watched.' } })
             return
           }
-          // Only labels the repository actually has are applied.
-          let catalogue = []
-          try {
-            catalogue = await labelCatalogue(entry)
-          } catch {
-            sendJson(res, 200, { ok: false, error: { code: 'catalogue-failed', message: 'Could not read the label catalogue.' } })
+          const template = LABEL_TEMPLATES.find((row) => row.id === str(body.template, 40))
+          if (template === undefined) {
+            sendJson(res, 200, { ok: false, error: { code: 'unknown-template', message: 'No such template.' } })
             return
           }
-          const present = new Set(catalogue.map((label) => label.name.toLowerCase()))
-          const keep = (name) => present.has(name.toLowerCase())
-          const lights = {
-            pipeline: template.lights.pipeline
-              .map((row) => ({
-                SUCCESS: row.SUCCESS.filter(keep),
-                RUNNING: row.RUNNING.filter(keep),
-                FAILURE: row.FAILURE.filter(keep),
-              }))
-              .filter((row) => row.SUCCESS.length + row.RUNNING.length + row.FAILURE.length > 0),
-            review: template.lights.review.filter(keep),
-            discussions: entry.lights?.discussions === true,
+          try {
+            sendJson(res, 200, await applyTemplate(template, entry))
+          } catch {
+            sendJson(res, 200, { ok: false, error: { code: 'apply-failed', message: 'Could not apply the template.' } })
           }
-          const actions =
-            (entry.actions ?? []).length > 0 ? entry.actions : template.recommended.slice(0, 12)
-          const result = await setRepoConfig(repoKey(parsed.owner, parsed.repo), { lights, actions })
-          sendJson(res, 200, {
-            ...result,
-            applied: template.id,
-            skipped: template.lights.pipeline
-              .flatMap((row) => [...row.SUCCESS, ...row.RUNNING, ...row.FAILURE])
-              .concat(template.lights.review)
-              .filter((name) => !keep(name)),
-          })
           return
         }
 
