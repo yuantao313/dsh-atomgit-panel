@@ -28,6 +28,8 @@ const WEB_HOST = 'https://atomgit.com'
 const OAUTH_TOKEN_URL = `${WEB_HOST}/oauth/token`
 const OAUTH_AUTHORIZE_URL = `${WEB_HOST}/oauth/authorize`
 const CALLBACK_PATH = `${API_BASE}/oauth/callback`
+// Fixed loopback port for OAuth redirects.
+const OAUTH_PORT_FALLBACK = 45821
 const ACCOUNT_URL = `${WEB_HOST}/setting`
 
 /**
@@ -957,7 +959,9 @@ export function apply(ctx) {
     return { ok: true, body: text }
   }
 
+  /** The address AtomGit redirects back to. */
   function callbackUrl() {
+    if (callbackPort !== null) return `http://127.0.0.1:${callbackPort}${CALLBACK_PATH}`
     try {
       const origin = typeof ctx.webServer.getOrigin === 'function' ? ctx.webServer.getOrigin() : ''
       return origin === '' ? CALLBACK_PATH : `${origin}${CALLBACK_PATH}`
@@ -966,12 +970,43 @@ export function apply(ctx) {
     }
   }
 
+  /** Answer one OAuth redirect; shared by the API route and the dedicated port. */
+  async function handleOauthCallback(req, res, url) {
+    if (!isLoopbackSocket(req) || loopbackHost(req) === null) {
+      sendHtml(res, 403, callbackPage({ ok: false, title: '无法接受这次回调', detail: 'Only a loopback browser can complete this sign-in.' }))
+      return
+    }
+    const code = str(url.searchParams.get('code'), 400)
+    const stateParam = str(url.searchParams.get('state'), 200)
+    const error = str(url.searchParams.get('error'), 200)
+    if (error !== '') {
+      sendHtml(res, 200, callbackPage({ ok: false, title: '授权被取消', detail: `AtomGit returned “${error}”.` }))
+      return
+    }
+    sweepOauthAttempts()
+    if (stateParam === '' || !oauthAttempts.has(stateParam)) {
+      sendHtml(res, 200, callbackPage({ ok: false, title: '授权已过期', detail: 'Start the sign-in again from Settings → AtomGit 工作台.' }))
+      return
+    }
+    oauthAttempts.delete(stateParam)
+    if (code === '') {
+      sendHtml(res, 200, callbackPage({ ok: false, title: '缺少授权码', detail: 'AtomGit did not return an authorization code.' }))
+      return
+    }
+    const done = await completeOauth(code)
+    if (done.ok) {
+      sendHtml(res, 200, callbackPage({ ok: true, title: '已登录 AtomGit', detail: state.auth.login === null ? 'You can close this tab.' : `Signed in as ${state.auth.login}. You can close this tab.` }))
+    } else {
+      sendHtml(res, 200, callbackPage({ ok: false, title: '登录失败', detail: `${done.code}: ${done.message}` }))
+    }
+  }
+
   function sweepOauthAttempts() {
     const cutoff = Date.now() - OAUTH_STATE_TTL_MS
     for (const [key, value] of oauthAttempts) if (value < cutoff) oauthAttempts.delete(key)
   }
 
-  function beginOauth(scope) {
+  async function beginOauth(scope) {
     if (!OAUTH_ENABLED) {
       return {
         ok: false,
@@ -979,6 +1014,16 @@ export function apply(ctx) {
           code: 'oauth-not-configured',
           message:
             'No OAuth application is configured. Set DSH_ATOMGIT_OAUTH_CLIENT_ID and DSH_ATOMGIT_OAUTH_CLIENT_SECRET, or sign in with a token.',
+        },
+      }
+    }
+    if (callbackReady !== null) await callbackReady
+    if (callbackPort === null) {
+      return {
+        ok: false,
+        error: {
+          code: 'oauth-port-unavailable',
+          message: `Port ${OAUTH_PORT_FALLBACK} could not be opened for the sign-in callback. Sign in with a token instead.`,
         },
       }
     }
@@ -1000,6 +1045,8 @@ export function apply(ctx) {
       code,
       client_id: OAUTH_CLIENT_ID,
       client_secret: OAUTH_CLIENT_SECRET,
+      // Redemption repeats the address the authorization named; the two must match.
+      redirect_uri: callbackUrl(),
     })
     let response
     try {
@@ -1196,6 +1243,55 @@ export function apply(ctx) {
     return { ok: true, state: publicState() }
   }
 
+  /** Port actually bound for OAuth redirects, or null when the listener failed. */
+  let callbackPort = null
+  let callbackServer = null
+  /** Resolves once the bind attempt settled, so authorisation never races it. */
+  let callbackReady = null
+
+  /**
+   * Bind the dedicated OAuth callback listener.
+   *
+   * The GUI port comes from the OS at every boot, which makes a registered
+   * `redirect_uri` expire between runs. This listener keeps one fixed port on
+   * the loopback interface so the registered value stays valid.
+   */
+  async function startCallbackListener() {
+    callbackReady = bindCallbackListener()
+    return callbackReady
+  }
+
+  async function bindCallbackListener() {
+    const wanted = OAUTH_PORT_FALLBACK
+    const { createServer } = await import('node:http')
+    const server = createServer((req, res) => {
+      const url = new URL(req.url ?? '', 'http://localhost')
+      if (url.pathname !== CALLBACK_PATH) {
+        sendHtml(res, 404, callbackPage({ ok: false, title: '地址无效', detail: 'This port only answers the AtomGit callback.' }))
+        return
+      }
+      handleOauthCallback(req, res, url).catch(() => {
+        try {
+          sendHtml(res, 500, callbackPage({ ok: false, title: '登录失败', detail: 'The callback could not be completed.' }))
+        } catch {
+          /* the response may already be sent */
+        }
+      })
+    })
+    await new Promise((resolve) => {
+      server.once('error', () => resolve(false))
+      server.listen(wanted, '127.0.0.1', () => resolve(true))
+    })
+    if (server.listening !== true) {
+      server.close()
+      callbackPort = null
+      return false
+    }
+    callbackServer = server
+    callbackPort = wanted
+    return true
+  }
+
   const route = {
     kind: 'prefix',
     path: API_BASE,
@@ -1205,33 +1301,7 @@ export function apply(ctx) {
       const method = req.method ?? 'GET'
 
       if (path === '/oauth/callback' && method === 'GET') {
-        if (!isLoopbackSocket(req) || loopbackHost(req) === null) {
-          sendHtml(res, 403, callbackPage({ ok: false, title: '无法接受这次回调', detail: 'Only a loopback browser can complete this sign-in.' }))
-          return
-        }
-        const code = str(url.searchParams.get('code'), 400)
-        const stateParam = str(url.searchParams.get('state'), 200)
-        const error = str(url.searchParams.get('error'), 200)
-        if (error !== '') {
-          sendHtml(res, 200, callbackPage({ ok: false, title: '授权被取消', detail: `AtomGit returned “${error}”.` }))
-          return
-        }
-        sweepOauthAttempts()
-        if (stateParam === '' || !oauthAttempts.has(stateParam)) {
-          sendHtml(res, 200, callbackPage({ ok: false, title: '授权已过期', detail: 'Start the sign-in again from Settings → AtomGit 工作台.' }))
-          return
-        }
-        oauthAttempts.delete(stateParam)
-        if (code === '') {
-          sendHtml(res, 200, callbackPage({ ok: false, title: '缺少授权码', detail: 'AtomGit did not return an authorization code.' }))
-          return
-        }
-        const done = await completeOauth(code)
-        if (done.ok) {
-          sendHtml(res, 200, callbackPage({ ok: true, title: '已登录 AtomGit', detail: state.auth.login === null ? 'You can close this tab.' : `Signed in as ${state.auth.login}. You can close this tab.` }))
-        } else {
-          sendHtml(res, 200, callbackPage({ ok: false, title: '登录失败', detail: `${done.code}: ${done.message}` }))
-        }
+        await handleOauthCallback(req, res, url)
         return
       }
 
@@ -1299,7 +1369,7 @@ export function apply(ctx) {
 
         if (method === 'POST' && path === '/oauth/start') {
           const body = await readJson(req)
-          sendJson(res, 200, beginOauth(body.scope))
+          sendJson(res, 200, await beginOauth(body.scope))
           return
         }
 
@@ -1397,6 +1467,20 @@ export function apply(ctx) {
   }
 
   ctx.effect(() => ctx.webServer.register(route), 'atomgit-panel: routes')
+
+  ctx.effect(() => {
+    startCallbackListener().catch(() => {
+      callbackPort = null
+    })
+    return () => {
+      if (callbackServer !== null) {
+        callbackServer.close()
+        callbackServer = null
+      }
+      callbackPort = null
+      callbackReady = null
+    }
+  }, 'atomgit-panel: oauth callback listener')
 
   const toolDefinition = {
     name: 'atomgit_tracker',

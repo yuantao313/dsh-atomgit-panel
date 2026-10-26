@@ -120,7 +120,7 @@ dsh plugin --profile desktop add link:$(pwd)/dsh-atomgit-panel
 > export DSH_ATOMGIT_OAUTH_CLIENT_SECRET=...
 > ```
 >
-> 回调地址填 `http://127.0.0.1:59058/api/dsh-atomgit-panel/oauth/callback`
+> 回调地址填 `http://127.0.0.1:45821/api/dsh-atomgit-panel/oauth/callback`（端口固定，注册一次即可）
 
 ### 关注的仓库
 
@@ -248,7 +248,9 @@ Host 只开放 loopback 同源的 `/api/dsh-atomgit-panel/**`。
 
 </details>
 
-`/oauth/callback` 作为来自 `atomgit.com` 的顶层导航到达，只接受 loopback 套接字与 loopback Host，并用一次性 `state`（10 分钟）确认归属。其余端点都要求完整的同源校验。
+`/oauth/callback` 由插件独占的 45821 端口接收，作为来自 `atomgit.com` 的顶层导航到达。它只接受 loopback 套接字与 loopback Host，并用一次性 `state`（10 分钟）确认归属。其余端点都要求完整的同源校验。
+
+OAuth 回调走固定端口，与 GUI 端口无关 —— GUI 端口由系统分配，每次启动可能不同。
 
 ## 许可
 
