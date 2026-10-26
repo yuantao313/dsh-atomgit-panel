@@ -43,7 +43,6 @@ const LABEL_TEMPLATES = [
     lights: {
       pipeline: [
         { SUCCESS: ['ci-pipeline-passed'], RUNNING: ['ci-pipeline-running'], FAILURE: ['ci-pipeline-failed'] },
-        { SUCCESS: ['RDV-SUCC'], RUNNING: ['RDV-RUNNING'], FAILURE: ['RDV-FAIL'] },
       ],
       review: ['lgtm', 'approved'],
     },
@@ -290,6 +289,7 @@ function normalizeState(parsed) {
             addedAt: str(record.addedAt, 40) || new Date().toISOString(),
             lights: normalizeLights(record.lights),
             actions: normalizeQuickActions(record.actions),
+            templateOffered: record.templateOffered === true,
           }
         })
         .filter((entry) => entry !== null)
@@ -501,6 +501,7 @@ export function apply(ctx) {
       addedAt: entry.addedAt,
       lights: entry.lights ?? normalizeLights(null),
       actions: entry.actions ?? [],
+      templateOffered: entry.templateOffered === true,
     }))
   }
 
@@ -1329,19 +1330,30 @@ export function apply(ctx) {
     // filled in, so the panel shows useful lamps without further setup.
     const entry = state.watched.find((row) => repoKey(row.owner, row.repo) === key)
     let applied = null
+    let offered = false
     if (entry !== undefined) {
       try {
         const catalogue = await labelCatalogue(entry)
         const choice = chooseTemplate(key, catalogue.map((label) => label.name))
-        if (choice !== null && choice.byName) {
-          const result = await applyTemplate(choice.template, entry)
-          if (result.ok === true) applied = { id: choice.template.id, name: choice.template.name }
+        if (choice !== null) {
+          offered = true
+          if (choice.byName) {
+            const result = await applyTemplate(choice.template, entry)
+            if (result.ok === true) applied = { id: choice.template.id, name: choice.template.name }
+          }
         }
       } catch {
-        applied = null
+        offered = false
+      }
+      if (offered) {
+        const index = state.watched.findIndex((row) => repoKey(row.owner, row.repo) === key)
+        if (index !== -1) {
+          state.watched[index] = { ...state.watched[index], templateOffered: true }
+          await saveState()
+        }
       }
     }
-    return { ok: true, key, added: true, applied, state: publicState() }
+    return { ok: true, key, added: true, applied, offered, state: publicState() }
   }
 
   async function removeRepo(spec) {
@@ -1555,7 +1567,15 @@ export function apply(ctx) {
           } catch {
             catalogue = []
           }
-          const choice = chooseTemplate(key, catalogue.map((label) => label.name))
+          // The hint belongs to a repository that has just been added. Once the
+          // suggestion was made, or the repository already has lamps configured,
+          // it stays out of the way.
+          const configured =
+            (entry.lights?.pipeline ?? []).length > 0 || (entry.lights?.review ?? []).length > 0
+          const choice =
+            entry.templateOffered === true || configured
+              ? null
+              : chooseTemplate(key, catalogue.map((label) => label.name))
           sendJson(res, 200, {
             ok: true,
             repo: key,
