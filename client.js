@@ -140,9 +140,10 @@ window.__ModuleLoader__.load({
       'panel.noActive': '还没有选择仓库',
       'panel.repoSwitch': '切换仓库',
       'panel.refresh': '刷新',
+      'panel.refreshing': '正在刷新',
+      'panel.kind': '类型',
       'panel.updated': '更新于 {time}',
       'time.justNow': '刚刚更新',
-      'panel.openOnAtomGit': '在 AtomGit 打开',
 
       'count.issuesOpen': '待办 Issue',
       'count.pullsOpen': '待合并 PR',
@@ -160,6 +161,15 @@ window.__ModuleLoader__.load({
       'scope.recentOff': '按更新时间筛选',
       'mine.label': '我参与',
       'search.placeholder': '搜索标题或作者',
+      'filter.byType': '类型',
+      'filter.byState': '状态',
+      'filter.byPerson': '相关人',
+      'filter.byRecency': '更新',
+      'filter.byText': '搜索',
+      'filter.personPlaceholder': '输入人名，或选择',
+      'filter.me': '我',
+      'filter.anyone': '任何人',
+      'filter.anyTime': '不限更新',
 
       'state.open': '开启',
       'state.closed': '已关闭',
@@ -175,23 +185,31 @@ window.__ModuleLoader__.load({
       'lamp.state.SUCCESS': '通过',
       'lamp.state.RUNNING': '运行中',
       'lamp.state.FAILURE': '失败',
-      'settings.quickActions': '快捷评论',
+      'settings.quickActions': '快捷操作',
+      'settings.quickActionsHint': '一个按钮可以同时做：发评论、加 label、删 label',
+      'settings.actionComment': '评论',
+      'settings.actionAddLabels': '加 label',
+      'settings.actionRemoveLabels': '删 label',
       'settings.quickActionsEmpty': '还没有快捷评论，点「添加」新建一条。',
       'settings.actionKey': '按钮',
-      'settings.actionBodyPlaceholder': '/lgtm（换行可直接回车）',
       'settings.actionAdd': '添加',
       'settings.actionRemove': '删除',
       'lamp.hint.SUCCESS': '成功',
       'lamp.hint.RUNNING': '运行中',
       'lamp.hint.FAILURE': '失败',
       'lamp.hint.review': '评审 label',
-      'lamp.reviewEmpty': '还没有评审 label，点「添加」新建一条。',
       'lamp.reviewAdd': '添加评审 label',
+      'tpl.recommend': '检测到 {name} 社区，可一键设置指示灯',
+      'tpl.recommendShape': '可用 {name} 的指示灯配置',
+      'tpl.apply': '一键设置',
+      'tpl.willWrite': '设置后',
+      'tpl.noReview': '不设评审灯',
       'lamp.discussions': '代码检视',
       'lamp.discussionsNone': '代码检视',
       'lamp.discussionsClean': '无未解决项',
       'action.resolve': '全部解决',
-      'action.resolveTitle': '解决全部 {n} 条未解决讨论',
+      'menu.open': '在 AtomGit 打开',
+      'menu.resolve': '解决全部 {n} 条检视意见',
       'settings.discussions': '跟踪代码检视',
       'settings.discussionsHint': '每个 PR 多一次请求',
       'settings.pipelines': '流水线',
@@ -258,9 +276,9 @@ window.__ModuleLoader__.load({
       'panel.noActive': 'No repository selected',
       'panel.repoSwitch': 'Switch repository',
       'panel.refresh': 'Refresh',
+      'panel.refreshing': 'Refreshing',
       'panel.updated': 'Updated {time}',
       'time.justNow': 'just now',
-      'panel.openOnAtomGit': 'Open on AtomGit',
 
       'count.issuesOpen': 'Open issues',
       'count.pullsOpen': 'Open PRs',
@@ -279,6 +297,15 @@ window.__ModuleLoader__.load({
       'scope.recentOff': 'Filter by update time',
       'mine.label': 'Mine',
       'search.placeholder': 'Search title or author',
+      'filter.byType': 'Type',
+      'filter.byState': 'State',
+      'filter.byPerson': 'Person',
+      'filter.byRecency': 'Updated',
+      'filter.byText': 'Search',
+      'filter.personPlaceholder': 'Type or pick a name',
+      'filter.me': 'me',
+      'filter.anyone': 'anyone',
+      'filter.anyTime': 'any time',
 
       'state.open': 'Open',
       'state.closed': 'Closed',
@@ -294,23 +321,31 @@ window.__ModuleLoader__.load({
       'lamp.state.SUCCESS': 'passed',
       'lamp.state.RUNNING': 'running',
       'lamp.state.FAILURE': 'failed',
-      'settings.quickActions': 'Quick comments',
+      'settings.quickActions': 'Quick actions',
+      'settings.quickActionsHint': 'One button can comment, add labels and remove labels together',
+      'settings.actionComment': 'Comment',
+      'settings.actionAddLabels': 'Add labels',
+      'settings.actionRemoveLabels': 'Remove labels',
       'settings.quickActionsEmpty': 'No quick comment yet. Press Add to create one.',
       'settings.actionKey': 'Key',
-      'settings.actionBodyPlaceholder': '/lgtm (Enter adds a line)',
       'settings.actionAdd': 'Add',
       'settings.actionRemove': 'Remove',
       'lamp.hint.SUCCESS': 'passed',
       'lamp.hint.RUNNING': 'running',
       'lamp.hint.FAILURE': 'failed',
       'lamp.hint.review': 'review label',
-      'lamp.reviewEmpty': 'No review label yet. Press Add to create one.',
       'lamp.reviewAdd': 'Add review label',
+      'tpl.recommend': 'Looks like {name} — set the lamps in one click',
+      'tpl.recommendShape': 'The {name} lamp layout fits here',
+      'tpl.apply': 'Set up',
+      'tpl.willWrite': 'After setup',
+      'tpl.noReview': 'no review lamp',
       'lamp.discussions': 'Code review',
       'lamp.discussionsNone': 'Code review',
       'lamp.discussionsClean': 'nothing unresolved',
       'action.resolve': 'Resolve all',
-      'action.resolveTitle': 'Resolve all {n} unresolved threads',
+      'menu.open': 'Open in AtomGit',
+      'menu.resolve': 'Resolve all {n} review threads',
       'settings.discussions': 'Track code review',
       'settings.discussionsHint': 'one extra request per PR',
       'settings.pipelines': 'Pipelines',
@@ -396,6 +431,25 @@ window.__ModuleLoader__.load({
       idle: 'var(--dsw-alias-state-idle-primary)',
     }
 
+    /**
+     * Text colour for a coloured fill.
+     *
+     * A label's own colour is used as the background, so the text has to flip
+     * between white and dark to stay readable; the relative luminance threshold
+     * is the usual one for body text.
+     */
+    function readableOn(hex) {
+      const value = String(hex ?? '').replace('#', '')
+      const full = value.length === 3 ? [...value].map((c) => c + c).join('') : value
+      if (!/^[0-9a-fA-F]{6}$/.test(full)) return C.text
+      const channel = (offset) => {
+        const part = parseInt(full.slice(offset, offset + 2), 16) / 255
+        return part <= 0.03928 ? part / 12.92 : ((part + 0.055) / 1.055) ** 2.4
+      }
+      const luminance = 0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4)
+      return luminance > 0.45 ? '#111111' : '#ffffff'
+    }
+
     function toneColor(tone) {
       if (tone === 'success') return C.ok
       if (tone === 'brand') return C.brand
@@ -450,6 +504,74 @@ window.__ModuleLoader__.load({
         resize: 'vertical',
         whiteSpace: 'pre-wrap',
       },
+      suggest: {
+        position: 'absolute',
+        top: '100%',
+        left: 0,
+        right: 0,
+        zIndex: 20,
+        marginTop: 2,
+        border: `0.5px solid ${C.border2}`,
+        borderRadius: 6,
+        background: C.layer1,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+        display: 'flex',
+        flexDirection: 'column',
+        maxHeight: 168,
+        overflowY: 'auto',
+        padding: 2,
+      },
+      suggestItem: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 5,
+        border: 'none',
+        background: 'transparent',
+        color: C.text,
+        font: 'inherit',
+        fontSize: 11,
+        textAlign: 'left',
+        padding: '3px 5px',
+        borderRadius: 4,
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      },
+      suggestDot: (color) => ({
+        width: 7,
+        height: 7,
+        borderRadius: '50%',
+        flex: 'none',
+        background: /^#?[0-9a-fA-F]{3,8}$/.test(String(color ?? '')) ? `#${String(color).replace(/^#/, '')}` : C.muted,
+      }),
+      templateRow: {
+        border: `0.5px solid ${C.border}`,
+        borderRadius: 6,
+        padding: '5px 8px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 3,
+        background: C.base,
+      },
+
+
+      filterBar: { display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', margin: '2px 0 6px' },
+      filterSelect: {
+        boxSizing: 'border-box',
+        height: 24,
+        border: `0.5px solid ${C.border2}`,
+        borderRadius: 6,
+        background: C.base,
+        color: C.text,
+        font: 'inherit',
+        fontSize: 11,
+        padding: '0 4px',
+        cursor: 'pointer',
+        minWidth: 0,
+        maxWidth: 130,
+      },
+
       tagCloud: { display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' },
       tagChip: {
         display: 'inline-flex',
@@ -477,28 +599,32 @@ window.__ModuleLoader__.load({
       },
       repoTabs: {
         display: 'flex',
-        gap: 2,
+        gap: 4,
         flexWrap: 'wrap',
-        borderBottom: `0.5px solid ${C.border}`,
-        paddingBottom: 0,
+        paddingBottom: 6,
         marginBottom: 2,
       },
       repoTab: {
         boxSizing: 'border-box',
-        border: 'none',
-        borderBottom: '2px solid transparent',
+        border: `0.5px solid ${C.border}`,
+        borderRadius: 6,
         background: 'transparent',
         color: C.muted,
         font: 'inherit',
         fontSize: 11.5,
-        padding: '4px 8px',
+        padding: '3px 9px',
         cursor: 'pointer',
         whiteSpace: 'nowrap',
         maxWidth: 180,
         overflow: 'hidden',
         textOverflow: 'ellipsis',
       },
-      repoTabActive: { color: C.text, fontWeight: 700, borderBottomColor: C.brand },
+      repoTabActive: {
+        color: C.text,
+        fontWeight: 700,
+        border: `0.5px solid ${C.brand}`,
+        background: `color-mix(in srgb, ${C.brand} 16%, transparent)`,
+      },
       repoName: { flex: 'auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12.5 },
       errorBox: {
         border: `0.5px solid color-mix(in srgb, ${C.error} 45%, transparent)`,
@@ -552,7 +678,7 @@ window.__ModuleLoader__.load({
       statValue: { fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' },
       statLabel: { fontSize: 10, color: C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
       pieWrap: { display: 'inline-flex', alignItems: 'center', flex: 'none' },
-      lampRow: { display: 'inline-flex', alignItems: 'center', gap: 3, flex: 'none' },
+      lampRow: { display: 'inline-flex', alignItems: 'center', gap: 2, flex: 'none' },
       lampDot: (state) => ({
         width: 10,
         height: 10,
@@ -595,6 +721,7 @@ window.__ModuleLoader__.load({
         flexDirection: 'column',
         gap: 3,
         width: '100%',
+        maxWidth: '100%',
         border: 'none',
         background: 'transparent',
         padding: 0,
@@ -605,20 +732,53 @@ window.__ModuleLoader__.load({
         cursor: 'pointer',
         minWidth: 0,
       },
-      rowActions: { display: 'inline-flex', alignItems: 'center', gap: 4, flex: 'none' },
-      rowQuick: {
-        boxSizing: 'border-box',
-        height: 18,
-        minWidth: 20,
-        padding: '0 5px',
+      rowLabels: { display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 1 },
+      menu: {
+        position: 'fixed',
+        zIndex: 60,
+        minWidth: 150,
+        maxWidth: 280,
+        padding: 3,
         border: `0.5px solid ${C.border2}`,
-        borderRadius: 4,
+        borderRadius: 8,
+        background: C.layer1,
+        boxShadow: '0 6px 18px rgba(0,0,0,0.24)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1,
+      },
+      actionCard: {
+        border: `0.5px solid ${C.border}`,
+        borderRadius: 6,
+        padding: '5px 7px',
         background: C.base,
-        color: C.muted,
-        font: 'inherit',
-        fontSize: 10,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 0,
+        minWidth: 0,
+      },
+      menuHead: {
+        padding: '4px 8px 2px',
+        fontSize: 10.5,
         fontWeight: 700,
+        color: C.muted,
+        fontVariantNumeric: 'tabular-nums',
+        cursor: 'default',
+      },
+      menuRule: { display: 'block', height: 0, borderTop: `0.5px solid ${C.border}`, margin: '3px 4px' },
+      menuItem: {
+        border: 'none',
+        background: 'transparent',
+        color: C.text,
+        font: 'inherit',
+        fontSize: 11.5,
+        textAlign: 'left',
+        padding: '5px 8px',
+        borderRadius: 5,
         cursor: 'pointer',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
       },
       rowCard: {
         border: `0.5px solid ${C.border}`,
@@ -627,15 +787,23 @@ window.__ModuleLoader__.load({
         marginBottom: 5,
         background: C.layer1,
         display: 'flex',
-        alignItems: 'center',
-        gap: 6,
+        flexDirection: 'column',
+        gap: 3,
         width: '100%',
         boxSizing: 'border-box',
         minWidth: 0,
+        position: 'relative',
       },
-      rowTop: { display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 },
-      rowNumber: { color: C.muted, fontVariantNumeric: 'tabular-nums', fontSize: 11.5, flex: 'none' },
-      rowTitle: { flex: 'auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 },      rowMeta: { display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: C.muted, minWidth: 0, flexWrap: 'wrap' },
+      rowTop: { display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 },
+      rowNumber: { color: C.muted, fontVariantNumeric: 'tabular-nums', fontSize: 11, flex: 'none', letterSpacing: '-0.2px' },
+      rowTitle: {
+        flex: 'auto',
+        minWidth: 0,
+        fontWeight: 500,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      },      rowMeta: { display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: C.muted, minWidth: 0, flexWrap: 'wrap' },
 
       filters: { display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center', margin: '2px 0 6px' },
       button: {
@@ -868,7 +1036,7 @@ window.__ModuleLoader__.load({
       const review = lights?.review ?? null
       const discussions = discussionsRatio
       const discussText = () => {
-        if (!discussions) return t('lamp.discussionsNone')
+        if (!discussions) return `${t('lamp.discussions')}: ${t('lamp.discussionsClean')}`
         const head = `${t('lamp.discussions')}: ${discussions.resolved}/${discussions.total}`
         if (discussions.total === 0) return `${head} — ${t('lamp.discussionsClean')}`
         return discussions.unresolved === 0 ? `${head} — ${t('lamp.discussionsClean')}` : head
@@ -890,14 +1058,17 @@ window.__ModuleLoader__.load({
               h(PieLamp, { lamp: review }),
             )
           : null,
-        // pie: resolved discussions, shown only when the repository opted in
-        discussions === null || discussions === undefined
-          ? null
-          : h(
-              'span',
-              { style: S.pieWrap, title: discussText(), 'data-atomgit-lamp': `discussions:${discussions.resolved}/${discussions.total}` },
-              h(ResolvePie, { ratio: discussions }),
-            ),
+        // pie: resolved discussions. A pull request whose threads were not read
+        // has nothing outstanding either, so it reads the same as a clean one.
+        h(
+          'span',
+          {
+            style: S.pieWrap,
+            title: discussText(),
+            'data-atomgit-lamp': `discussions:${discussions === null || discussions === undefined ? 'none' : `${discussions.resolved}/${discussions.total}`}`,
+          },
+          h(ResolvePie, { ratio: discussions }),
+        ),
       )
     }
 
@@ -963,22 +1134,168 @@ window.__ModuleLoader__.load({
       })
     }
 
-    function ItemRow({ item, onOpen, actions, onComment, commenting, onResolve, resolving, reviewConfigured, t }) {
+    /**
+     * A filter dropdown.
+     *
+     * A native select is used so the list, keyboard handling and outside-click
+     * dismissal are the platform's own rather than re-implemented here.
+     */
+    function Select({ label, value, options, onChange, grow = '0 1 auto' }) {
+      return h(
+        'select',
+        {
+          style: { ...S.filterSelect, flex: grow },
+          value,
+          'aria-label': label,
+          title: label,
+          'data-atomgit-select': label,
+          onChange: (event) => onChange(event.target.value),
+        },
+        options.map((option) => h('option', { key: option.value, value: option.value }, option.label)),
+      )
+    }
+
+    /** A read-only label chip, coloured by the label's own colour. */
+    function LabelChip({ label }) {
+      const color = /^#?[0-9a-fA-F]{3,8}$/.test(String(label.color ?? ''))
+        ? `#${String(label.color).replace(/^#/, '')}`
+        : C.muted
+      return h(
+        'span',
+        {
+          style: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            height: 16,
+            padding: '0 7px',
+            // Flat fill, no border, pill outline.
+            borderRadius: 999,
+            border: 0,
+            background: color,
+            color: readableOn(color),
+            fontSize: 10,
+            fontWeight: 500,
+            lineHeight: 1,
+            whiteSpace: 'nowrap',
+            maxWidth: 140,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          },
+        },
+        label.name,
+      )
+    }
+
+    /**
+     * The row menu, opened where the pointer asked for it.
+     *
+     * A header names the item and cannot be chosen. Entries are the configured
+     * shortcut buttons, then review resolution, separated by rules.
+     */
+    function RowMenu({ menu, actions, busy, t, onSelect, onClose }) {
+      const ref = useRef(null)
+
+      useEffect(() => {
+        if (menu === null) return undefined
+        const onPointer = (event) => {
+          if (ref.current !== null && ref.current.contains(event.target)) return
+          onClose()
+        }
+        const onKey = (event) => {
+          if (event.key === 'Escape') onClose()
+        }
+        document.addEventListener('mousedown', onPointer)
+        document.addEventListener('keydown', onKey)
+        return () => {
+          document.removeEventListener('mousedown', onPointer)
+          document.removeEventListener('keydown', onKey)
+        }
+      }, [menu, onClose])
+
+      if (menu === null) return null
+
+      const item = menu.item
+      const unresolved = item.discussions?.unresolved ?? 0
+
+      const entry = (id, text) =>
+        h(
+          'button',
+          {
+            key: id,
+            type: 'button',
+            role: 'menuitem',
+            style: S.menuItem,
+            disabled: busy !== null,
+            onClick: () => onSelect(item, id),
+          },
+          text,
+        )
+      const rule = (key) => h('span', { key, style: S.menuRule })
+
+      return h(
+        'div',
+        { ref, style: { ...S.menu, left: menu.x, top: menu.y }, 'data-atomgit-menu': '1', role: 'menu' },
+        h(
+          'span',
+          { style: S.menuHead, 'data-atomgit-menu-head': '1' },
+          `${item.kind === 'pr' ? '!' : '#'}${item.number}`,
+        ),
+        rule('r0'),
+        entry('open', t('menu.open')),
+        actions.length === 0
+          ? null
+          : h('span', { key: 'acts', style: { display: 'contents' } },
+              rule('r1'),
+              ...actions.map((action) => entry(`action:${action.key}`, describeAction(action)))),
+        unresolved > 0 ? rule('r2') : null,
+        unresolved > 0 ? entry('resolve', t('menu.resolve').replace('{n}', String(unresolved))) : null,
+      )
+    }
+
+    /** What a shortcut does, in one line: comment text and label changes. */
+    function describeAction(action) {
+      const parts = []
+      if (action.body) parts.push(action.body.replace(/\n/g, ' + '))
+      for (const name of action.add ?? []) parts.push(`+${name}`)
+      for (const name of action.remove ?? []) parts.push(`-${name}`)
+      return `${action.key} → ${parts.join('  ')}`
+    }
+
+    function ItemRow({ item, onOpen, reviewConfigured, onContextMenu, t }) {
       const meta = []
       if (item.author) meta.push(item.author)
       if (item.comments > 0) meta.push(`💬 ${item.comments}`)
       if (item.updatedAt) meta.push(formatTime(item.updatedAt, t))
-      const quick = actions ?? []
+
+      // Labels a lamp already speaks for stay off the row; the rest are shown so
+      // nothing the repository tracks disappears from view.
+      const consumed = new Set(
+        [...(item.lights?.pipeline?.present ?? []), ...(item.lights?.review?.present ?? [])].map((hit) =>
+          String(hit.name).toLowerCase(),
+        ),
+      )
+      const spare = (item.labels ?? []).filter((label) => !consumed.has(String(label.name).toLowerCase()))
+
       return h(
         'div',
-        { style: S.rowCard, 'data-atomgit-item': `${item.kind}:${item.number}` },
+        {
+          style: S.rowCard,
+          'data-atomgit-item': `${item.kind}:${item.number}`,
+          onContextMenu: (event) => {
+            // The browser menu would cover the panel; this row offers its own.
+            event.preventDefault()
+            onContextMenu(item, event.clientX, event.clientY)
+          },
+        },
         h(
           'button',
           { type: 'button', style: S.rowMain, onClick: () => onOpen(item) },
           h(
             'span',
             { style: S.rowTop },
-            h(Lamps, { lights: item.lights, reviewConfigured, discussionsRatio: item.discussions, t }),
+            item.kind === 'pr'
+              ? h(Lamps, { lights: item.lights, reviewConfigured, discussionsRatio: item.discussions, t })
+              : null,
             h(
               'span',
               { style: { ...S.rowNumber, color: toneColor(item.kind === 'pr' ? 'brand' : 'idle') } },
@@ -987,42 +1304,14 @@ window.__ModuleLoader__.load({
             h('span', { style: S.rowTitle, title: item.title }, item.title),
           ),
           meta.length > 0 ? h('span', { style: S.rowMeta }, meta.join(' · ')) : null,
+          spare.length > 0
+            ? h(
+                'span',
+                { style: S.rowLabels },
+                spare.map((label) => h(LabelChip, { key: label.name, label })),
+              )
+            : null,
         ),
-        quick.length === 0 && (item.discussions?.unresolved ?? 0) === 0
-          ? null
-          : h(
-              'span',
-              { style: S.rowActions },
-              (item.discussions?.unresolved ?? 0) > 0 && onResolve
-                ? h(
-                    'button',
-                    {
-                      type: 'button',
-                      style: { ...S.rowQuick, width: 'auto' },
-                      title: t('action.resolveTitle').replace('{n}', String(item.discussions.unresolved)),
-                      disabled: resolving === `${item.kind}:${item.number}`,
-                      'data-atomgit-resolve': item.number,
-                      onClick: () => onResolve(item),
-                    },
-                    t('action.resolve'),
-                  )
-                : null,
-              quick.map((action) =>
-                h(
-                  'button',
-                  {
-                    key: action.key,
-                    type: 'button',
-                    style: S.rowQuick,
-                    title: action.body,
-                    disabled: commenting === `${item.kind}:${item.number}:${action.key}`,
-                    'data-atomgit-quick': action.key,
-                    onClick: () => onComment(item, action),
-                  },
-                  action.key,
-                ),
-              ),
-            ),
       )
     }
 
@@ -1272,6 +1561,199 @@ window.__ModuleLoader__.load({
      * running and failure labels. The review box lists the labels an item must
      * all carry to count as reviewed.
      */
+    /**
+     * A label input that suggests names from the repository's own catalogue.
+     *
+     * Typing filters the catalogue; picking a suggestion fills the field. The
+     * value stays free text so a label the catalogue has not caught up with can
+     * still be typed.
+     */
+    function LabelField({ repo, value, placeholder, onChange, t, ...rest }) {
+      const [suggestions, setSuggestions] = useState([])
+      const [focused, setFocused] = useState(false)
+
+      useEffect(() => {
+        const query = String(value ?? '').trim()
+        if (!focused) return undefined
+        let alive = true
+        const timer = setTimeout(() => {
+          callApi(`/labels?repo=${encodeURIComponent(repo)}&q=${encodeURIComponent(query)}`).then((result) => {
+            if (!alive) return
+            setSuggestions(result?.ok === true ? result.labels : [])
+          })
+        }, 180)
+        return () => {
+          alive = false
+          clearTimeout(timer)
+        }
+      }, [repo, value, focused])
+
+      const shown = focused ? suggestions.slice(0, 8) : []
+      return h(
+        'span',
+        { style: { position: 'relative', display: 'inline-flex', flex: '1 1 auto', minWidth: 0 } },
+        h('input', {
+          ...rest,
+          style: { ...S.input, width: '100%' },
+          value,
+          placeholder,
+          spellCheck: false,
+          onFocus: () => setFocused(true),
+          onBlur: () => setTimeout(() => setFocused(false), 120),
+          onChange,
+        }),
+        shown.length === 0
+          ? null
+          : h(
+              'span',
+              { style: S.suggest, 'data-atomgit-suggest': '1' },
+              shown.map((label) =>
+                h(
+                  'button',
+                  {
+                    key: label.name,
+                    type: 'button',
+                    style: S.suggestItem,
+                    onMouseDown: (event) => {
+                      // mousedown keeps focus long enough to register the pick
+                      event.preventDefault()
+                      onChange({ target: { value: label.name } })
+                      setFocused(false)
+                    },
+                  },
+                  h('span', { style: S.suggestDot(label.color) }),
+                  label.name,
+                ),
+              ),
+            ),
+      )
+    }
+
+    /**
+     * Edit a list of labels: type one, add it, remove it again.
+     *
+     * Review requirements and shortcut label changes are the same interaction, so
+     * they share this component; only the caption and the handler differ.
+     */
+    function LabelEditor({ repo, values, caption, placeholder, addLabel, t, emptyHint, testId }) {
+      const [draft, setDraft] = useState('')
+      const commit = () => {
+        const name = draft.trim()
+        if (name === '') return
+        addLabel(name)
+        setDraft('')
+      }
+      return h(
+        'div',
+        { style: { display: 'flex', flexDirection: 'column', gap: 4 }, 'data-atomgit-label-editor': testId },
+        values.length === 0
+          ? emptyHint === undefined
+            ? null
+            : h('div', { style: { fontSize: 10.5, color: C.muted, fontStyle: 'italic' } }, emptyHint)
+          : h(
+              'div',
+              { style: S.tagCloud },
+              values.map((name, index) =>
+                h(
+                  'span',
+                  { key: `${name}:${index}`, style: S.tagChip },
+                  h('span', { style: { maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' } }, name),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      style: S.tagChipRemove,
+                      title: t('settings.actionRemove'),
+                      'aria-label': `${t('settings.actionRemove')} ${name}`,
+                      'data-atomgit-label-remove': `${testId}:${index}`,
+                      onClick: () => addLabel(name, true),
+                    },
+                    '×',
+                  ),
+                ),
+              ),
+            ),
+        h(
+          'div',
+          { style: { display: 'flex', alignItems: 'center', gap: 6 } },
+          h(LabelField, {
+            repo,
+            value: draft,
+            placeholder,
+            'data-atomgit-label-input': testId,
+            onChange: (event) => setDraft(event.target.value),
+            onKeyDown: (event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                commit()
+              }
+            },
+          }),
+          h(Btn, { disabled: draft.trim() === '', onClick: commit }, caption),
+        ),
+      )
+    }
+
+    /**
+     * The single preset that fits this repository, if any.
+     *
+     * It appears only when the repository's own labels satisfy it, and states
+     * the lamps it would install before anything is written.
+     */
+    function TemplateHint({ repo, t, onApplied }) {
+      const [hint, setHint] = useState(null)
+      const [busy, setBusy] = useState(false)
+
+      useEffect(() => {
+        let alive = true
+        setHint(null)
+        callApi(`/templates?repo=${encodeURIComponent(repo)}`).then((result) => {
+          if (alive) setHint(result?.ok === true && result.recommendation !== undefined ? result.recommendation : null)
+        })
+        return () => {
+          alive = false
+        }
+      }, [repo])
+
+      if (hint === null || hint === undefined || (hint.missing ?? []).length > 0) return null
+
+      const apply = async () => {
+        setBusy(true)
+        try {
+          const result = await postJson('/apply-template', { repo, template: hint.id })
+          if (result?.ok === true) onApplied()
+        } finally {
+          setBusy(false)
+        }
+      }
+
+      const part = (names) => (names.length > 0 ? names.join(', ') : '—')
+      const rows = hint.lights.pipeline.map(
+        (row) =>
+          `${t('lamp.state.SUCCESS')} ${part(row.SUCCESS)} · ${t('lamp.state.RUNNING')} ${part(row.RUNNING)} · ${t('lamp.state.FAILURE')} ${part(row.FAILURE)}`,
+      )
+      const review = hint.lights.review.length > 0 ? hint.lights.review.join(' + ') : t('tpl.noReview')
+
+      return h(
+        'div',
+        { style: S.templateRow, 'data-atomgit-template': hint.id },
+        h(
+          'div',
+          { style: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' } },
+          h(
+            'span',
+            { style: { fontWeight: 700, fontSize: 11.5 } },
+            t(hint.byName === true ? 'tpl.recommend' : 'tpl.recommendShape').replace('{name}', hint.name),
+          ),
+          h('span', { style: { marginLeft: 'auto', flex: 'none' } },
+            h(Btn, { variant: 'primary', disabled: busy, onClick: apply }, busy ? t('common.saving') : t('tpl.apply'))),
+        ),
+        h('div', { style: { ...S.label, marginTop: 2 } }, t('tpl.willWrite')),
+        rows.map((line, index) => h('div', { key: index, style: S.templateShape }, line)),
+        h('div', { style: S.templateShape }, `${t('lamp.review')}: ${review}`),
+      )
+    }
+
     function LampEditor({ repo, lights, actions, t, onSave, busy }) {
       const [rows, setRows] = useState(() => {
         const list = (lights?.pipeline ?? []).map((row) => ({
@@ -1288,7 +1770,12 @@ window.__ModuleLoader__.load({
       })
       const [discussOn, setDiscussOn] = useState(() => lights?.discussions === true)
       const [actDraft, setActDraft] = useState(() =>
-        (actions ?? []).map((a) => ({ key: a.key, body: a.body })),
+        (actions ?? []).map((a) => ({
+          key: a.key,
+          body: a.body ?? '',
+          add: a.add ?? [],
+          remove: a.remove ?? [],
+        })),
       )
 
       // Typing a label and pressing Enter appends it; the list stays a row of chips.
@@ -1307,11 +1794,11 @@ window.__ModuleLoader__.load({
       }
 
       const cell = (index, state) =>
-        h('input', {
-          style: { ...S.input, flex: '1 1 0', minWidth: 0, fontSize: 11.5 },
+        h(LabelField, {
+          repo,
+          style: { fontSize: 11.5 },
           value: rows[index][state],
           placeholder: t(`lamp.hint.${state}`),
-          spellCheck: false,
           'data-atomgit-cell': `${index}:${state}`,
           onChange: (event) =>
             setRows((current) =>
@@ -1372,50 +1859,20 @@ window.__ModuleLoader__.load({
         ),
 
         h('div', { style: { ...S.label, fontWeight: 700, marginTop: 4 } }, t('lamp.review')),
-        reviewRows.length === 0
-          ? null
-          : h(
-              'div',
-              { style: S.tagCloud, 'data-atomgit-review-cloud': '1' },
-              reviewRows.map((name, index) =>
-                h(
-                  'span',
-                  { key: index, style: S.tagChip },
-                  h('span', { style: { maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' } }, name === '' ? '…' : name),
-                  h(
-                    'button',
-                    {
-                      type: 'button',
-                      style: S.tagChipRemove,
-                      title: t('settings.actionRemove'),
-                      'aria-label': `${t('settings.actionRemove')} ${name}`,
-                      'data-atomgit-review-remove': index,
-                      onClick: () => setReviewRows((current) => current.filter((_, i) => i !== index)),
-                    },
-                    '×',
-                  ),
-                ),
-              ),
-            ),
-        h(
-          'div',
-          { style: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 } },
-          h('input', {
-            style: { ...S.input, flex: '1 1 auto', fontSize: 11.5 },
-            value: reviewDraft,
-            placeholder: t('lamp.hint.review'),
-            spellCheck: false,
-            'data-atomgit-review-draft': '1',
-            onChange: (event) => setReviewDraft(event.target.value),
-            onKeyDown: (event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                commitReview()
-              }
-            },
-          }),
-          h(Btn, { disabled: reviewDraft.trim() === '', onClick: commitReview }, t('lamp.reviewAdd')),
-        ),
+        h(LabelEditor, {
+          repo,
+          values: reviewRows,
+          caption: t('lamp.reviewAdd'),
+          placeholder: t('lamp.hint.review'),
+          testId: 'review',
+          t,
+          addLabel: (name, remove) =>
+            setReviewRows((current) => {
+              if (remove === true) return current.filter((entry) => entry !== name)
+              if (current.length >= 12 || current.includes(name)) return current
+              return [...current, name]
+            }),
+        }),
 
         h(
           'label',
@@ -1431,40 +1888,109 @@ window.__ModuleLoader__.load({
         ),
 
         h('div', { style: { ...S.label, fontWeight: 700, marginTop: 4 } }, t('settings.quickActions')),
+        h('div', { style: { fontSize: 10.5, color: C.muted, marginBottom: 2 } }, t('settings.quickActionsHint')),
         actDraft.length === 0
           ? h('div', { style: { fontSize: 10.5, color: C.muted, fontStyle: 'italic' } }, t('settings.quickActionsEmpty'))
           : actDraft.map((action, index) =>
               h(
                 'div',
-                { key: index, style: { display: 'flex', alignItems: 'flex-start', gap: 6, minWidth: 0 } },
-                h('input', {
-                  style: { ...S.input, width: 56, flex: 'none', fontSize: 11.5, textAlign: 'center' },
-                  value: action.key,
-                  placeholder: t('settings.actionKey'),
-                  maxLength: 8,
-                  onChange: (event) =>
-                    setActDraft((current) => current.map((a, i) => (i === index ? { ...a, key: event.target.value } : a))),
-                }),
-                h('textarea', {
-                  style: { ...S.commentBody, flex: '1 1 auto' },
-                  rows: 2,
-                  value: action.body,
-                  placeholder: t('settings.actionBodyPlaceholder'),
-                  spellCheck: false,
-                  'data-atomgit-action-body': index,
-                  onChange: (event) =>
-                    setActDraft((current) => current.map((a, i) => (i === index ? { ...a, body: event.target.value } : a))),
-                }),
-                h(Btn, { variant: 'danger', onClick: () => setActDraft((current) => current.filter((_, i) => i !== index)) },
-                  t('settings.actionRemove')),
+                { key: index, style: S.actionCard, 'data-atomgit-action': index },
+                h(
+                  'div',
+                  { style: { display: 'flex', alignItems: 'center', gap: 6 } },
+                  h('input', {
+                    style: { ...S.input, width: 64, flex: 'none', fontSize: 11.5, textAlign: 'center' },
+                    value: action.key,
+                    placeholder: t('settings.actionKey'),
+                    maxLength: 8,
+                    onChange: (event) =>
+                      setActDraft((current) => current.map((a, i) => (i === index ? { ...a, key: event.target.value } : a))),
+                  }),
+                  h(
+                    Btn,
+                    { variant: 'danger', onClick: () => setActDraft((current) => current.filter((_, i) => i !== index)) },
+                    t('settings.actionRemove'),
+                  ),
+                ),
+                h(
+                  'div',
+                  { style: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 } },
+                  h('span', { style: { width: 52, flex: 'none', fontSize: 10.5, color: C.muted } }, t('settings.actionComment')),
+                  h('textarea', {
+                    style: { ...S.commentBody, flex: '1 1 auto' },
+                    rows: 2,
+                    value: action.body,
+                    placeholder: '/lgtm',
+                    spellCheck: false,
+                    'data-atomgit-action-body': index,
+                    onChange: (event) =>
+                      setActDraft((current) => current.map((a, i) => (i === index ? { ...a, body: event.target.value } : a))),
+                  }),
+                ),
+                h(
+                  'div',
+                  { style: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 } },
+                  h('span', { style: { width: 52, flex: 'none', fontSize: 10.5, color: C.muted } }, t('settings.actionAddLabels')),
+                  h(
+                    'div',
+                    { style: { flex: '1 1 auto', minWidth: 0 } },
+                    h(LabelEditor, {
+                      repo,
+                      values: action.add ?? [],
+                      caption: t('settings.actionAdd'),
+                      placeholder: 'RDV-SUCC',
+                      testId: `add${index}`,
+                      t,
+                      addLabel: (name, remove) =>
+                        setActDraft((current) =>
+                          current.map((a, i) => {
+                            if (i !== index) return a
+                            const list = a.add ?? []
+                            return {
+                              ...a,
+                              add: remove === true ? list.filter((n) => n !== name) : list.includes(name) ? list : [...list, name],
+                            }
+                          }),
+                        ),
+                    }),
+                  ),
+                ),
+                h(
+                  'div',
+                  { style: { display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 4 } },
+                  h('span', { style: { width: 52, flex: 'none', fontSize: 10.5, color: C.muted, paddingTop: 6 } }, t('settings.actionRemoveLabels')),
+                  h(
+                    'div',
+                    { style: { flex: '1 1 auto', minWidth: 0 } },
+                    h(LabelEditor, {
+                      repo,
+                      values: action.remove ?? [],
+                      caption: t('settings.actionAdd'),
+                      placeholder: 'RDV-RUNNING, RDV-FAIL',
+                      testId: `remove${index}`,
+                      t,
+                      addLabel: (name, remove) =>
+                        setActDraft((current) =>
+                          current.map((a, i) => {
+                            if (i !== index) return a
+                            const list = a.remove ?? []
+                            return {
+                              ...a,
+                              remove: remove === true ? list.filter((n) => n !== name) : list.includes(name) ? list : [...list, name],
+                            }
+                          }),
+                        ),
+                    }),
+                  ),
+                ),
               ),
             ),
         h(
           'div',
           { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
           h(Btn, {
-            disabled: actDraft.length >= 6,
-            onClick: () => setActDraft((current) => [...current, { key: '', body: '' }]),
+            disabled: actDraft.length >= 8,
+            onClick: () => setActDraft((current) => [...current, { key: '', body: '', add: [], remove: [] }]),
           }, t('settings.actionAdd')),
           h(
             Btn,
@@ -1482,7 +2008,9 @@ window.__ModuleLoader__.load({
                     review: reviewRows.map((n) => n.trim()).filter((n) => n !== ''),
                     discussions: discussOn === true,
                   },
-                  actions: actDraft.filter((a) => a.key.trim() !== '' && a.body.trim() !== ''),
+                  actions: actDraft.filter(
+                    (a) => a.key.trim() !== '' && (a.body.trim() !== '' || (a.add ?? []).length > 0 || (a.remove ?? []).length > 0),
+                  ),
                 }),
             },
             busy === `lights:${repo}` ? t('common.saving') : t('common.save'),
@@ -1499,6 +2027,7 @@ window.__ModuleLoader__.load({
       const [flash, setFlash] = useState(null)
       const [repoDraft, setRepoDraft] = useState('')
       const [editorRepo, setEditorRepo] = useState(null)
+      const [editorEpoch, setEditorEpoch] = useState(0)
       const [intervalDraft, setIntervalDraft] = useState('')
       const mounted = useRef(true)
 
@@ -1682,7 +2211,24 @@ window.__ModuleLoader__.load({
                             onClick: () => removeRepo(entry.key),
                           }, t('settings.repoRemove')),
                         ),
-                        h(LampEditor, { repo: entry.key, lights: entry.lights, actions: entry.actions, t, busy, onSave: saveLights }),
+                        h(TemplateHint, {
+                          repo: entry.key,
+                          t,
+                          onApplied: () => {
+                            // Re-read the repository config, then remount the editor
+                            // so its fields show what was written.
+                            Promise.resolve(load()).then(() => setEditorEpoch((n) => n + 1))
+                          },
+                        }),
+                        h(LampEditor, {
+                          key: `${entry.key}:${editorEpoch}`,
+                          repo: entry.key,
+                          lights: entry.lights,
+                          actions: entry.actions,
+                          t,
+                          busy,
+                          onSave: saveLights,
+                        }),
                       )
                     })(),
               ),
@@ -1721,8 +2267,8 @@ window.__ModuleLoader__.load({
       const [metaError, setMetaError] = useState(null)
       const [kindFilter, setKindFilter] = useState('pr')
       const [scopeFilter, setScopeFilter] = useState('open')
+      const [personFilter, setPersonFilter] = useState('')
       const [query, setQuery] = useState('')
-      const [mineOnly, setMineOnly] = useState(false)
       const [recentHours, setRecentHours] = useState(null)
       const [pendingRepo, setPendingRepo] = useState(null)
       const [refreshing, setRefreshing] = useState(false)
@@ -1816,6 +2362,49 @@ window.__ModuleLoader__.load({
       const [commentError, setCommentError] = useState(null)
 
       const [resolving, setResolving] = useState(null)
+      const [menu, setMenu] = useState(null)
+
+
+      /** Pick what a menu entry does to the item it was opened on. */
+      const runMenuEntry = async (item, id) => {
+        setMenu(null)
+        if (id === 'open') {
+          openInBrowser(item.url)
+          return
+        }
+        if (id === 'resolve') {
+          await resolveItem(item)
+          return
+        }
+        if (id.startsWith('action:')) {
+          await runAction(item, id.slice('action:'.length))
+        }
+      }
+
+      /** Run one configured shortcut: its comment and label changes together. */
+      const runAction = async (item, key) => {
+        setCommenting(`${item.kind}:${item.number}:${key}`)
+        setCommentError(null)
+        try {
+          const result = await postJson('/run-action', {
+            repo: activeKey,
+            kind: item.kind,
+            number: item.number,
+            action: key,
+          })
+          if (result?.ok !== true && result?.error) {
+            setCommentError(result.error)
+          } else if (Array.isArray(result?.failed) && result.failed.length > 0) {
+            setCommentError({
+              code: 'partial',
+              message: result.failed.map((row) => `${row.step}: ${row.error?.message ?? ''}`).join('; '),
+            })
+          }
+          await loadSnapshot(true, activeKey)
+        } finally {
+          if (mounted.current) setCommenting(null)
+        }
+      }
 
       /** Resolve every unresolved review thread on one pull request. */
       const resolveItem = async (item) => {
@@ -1833,27 +2422,6 @@ window.__ModuleLoader__.load({
         }
       }
 
-      /** Post one configured quick comment on this item. */
-      const postComment = async (item, action) => {
-        const ticket = `${item.kind}:${item.number}:${action.key}`
-        setCommenting(ticket)
-        setCommentError(null)
-        try {
-          const result = await postJson('/comment', {
-            repo: activeKey,
-            kind: item.kind,
-            number: item.number,
-            action: action.key,
-          })
-          if (result?.ok !== true) {
-            setCommentError(result?.error ?? { code: 'unknown', message: 'comment failed' })
-            return
-          }
-          await loadSnapshot(true, activeKey)
-        } finally {
-          if (mounted.current) setCommenting(null)
-        }
-      }
 
       const switchRepo = async (key) => {
         setPendingRepo(key)
@@ -1872,21 +2440,30 @@ window.__ModuleLoader__.load({
 
       const items = snapshot?.items ?? []
       const viewer = snapshot?.viewer ?? meta?.auth?.login ?? null
+      // Everyone who authored or was assigned to the items in view, so the person
+      // filter can only offer names that actually occur.
+      const people = useMemo(() => {
+        const seen = new Set()
+        for (const item of items) {
+          for (const name of [item.author, item.assignee, ...(Array.isArray(item.assignees) ? item.assignees : [])]) {
+            if (typeof name === 'string' && name !== '') seen.add(name)
+          }
+        }
+        return [...seen].sort((left, right) => left.localeCompare(right))
+      }, [items])
+
       const filtered = useMemo(() => {
         const needle = query.trim().toLowerCase()
         const cutoff = recentHours === null ? null : Date.now() - recentHours * 3600 * 1000
         const login = typeof viewer === 'string' ? viewer.toLowerCase() : ''
+        const wanted = personFilter.trim().toLowerCase()
         return items.filter((item) => {
           if (item.kind !== kindFilter) return false
           if (scopeFilter === 'open' && !(item.state === 'open' || item.state === 'draft')) return false
           if (scopeFilter === 'closed' && !(item.state === 'closed' || item.state === 'merged')) return false
-          if (mineOnly) {
-            if (login === '') return false
-            const involved =
-              String(item.author).toLowerCase() === login ||
-              String(item.assignee).toLowerCase() === login ||
-              (Array.isArray(item.assignees) && item.assignees.some((name) => String(name).toLowerCase() === login))
-            if (!involved) return false
+          if (wanted !== '') {
+            const people = [item.author, item.assignee, ...(Array.isArray(item.assignees) ? item.assignees : [])]
+            if (!people.some((name) => String(name ?? '').toLowerCase() === wanted)) return false
           }
           if (cutoff !== null) {
             const when = Date.parse(item.updatedAt)
@@ -1895,7 +2472,7 @@ window.__ModuleLoader__.load({
           if (needle !== '' && !`${item.title} ${item.author} #${item.number}`.toLowerCase().includes(needle)) return false
           return true
         })
-      }, [items, kindFilter, scopeFilter, query, mineOnly, recentHours, viewer])
+      }, [items, kindFilter, scopeFilter, personFilter, query, recentHours, viewer])
 
       const counts = snapshot?.counts ?? null
       const activity = snapshot?.activity ?? []
@@ -1930,53 +2507,54 @@ window.__ModuleLoader__.load({
                 activity.slice(0, 5).map((entry, index) => h(ActivityRow, { key: `${entry.at}:${entry.kind}:${entry.number}:${index}`, entry, t })),
               )
             : null,
-          h(Segments, {
-            label: t('panel.kind'),
-            value: kindFilter,
-            items: ['pr', 'issue'].map((value) => ({ value, label: t(`filter.${value}`) })),
-            onChange: setKindFilter,
-          }),
-          h(Segments, {
-            label: t('scope.all'),
-            value: scopeFilter,
-            items: ['open', 'closed', 'all'].map((value) => ({ value, label: t(`scope.${value}`) })),
-            onChange: setScopeFilter,
-          }),
+          // One control per facet, side by side, so the bar costs a single line.
           h(
             'div',
-            { style: S.filters },
-            h(
-              Chip,
-              {
-                active: mineOnly,
-                title: typeof viewer === 'string' ? t('mine.label') : t('panel.notSignedInHint'),
-                'data-atomgit-filter': 'mine',
-                onClick: () => setMineOnly((value) => !value),
-              },
-              t('mine.label'),
-            ),
-            h(
-              Chip,
-              {
-                active: recentHours !== null,
-                'data-atomgit-filter': 'recent',
-                onClick: () => setRecentHours((value) => (value === null ? 24 : null)),
-              },
-              recentHours === null ? t('scope.recentOff') : t('scope.recent').replace('{hours}', String(recentHours)),
-            ),
-            recentHours === null
-              ? null
-              : [1, 24, 168].map((hours) =>
-                  h(Chip, { key: hours, active: recentHours === hours, onClick: () => setRecentHours(hours) }, `${hours}h`),
-                ),
+            { style: S.filterBar, 'data-atomgit-filters': '1' },
+            h(Select, {
+              label: t('filter.byType'),
+              value: kindFilter,
+              options: ['pr', 'issue'].map((value) => ({ value, label: t(`filter.${value}`) })),
+              onChange: setKindFilter,
+            }),
+            h(Select, {
+              label: t('filter.byState'),
+              value: scopeFilter,
+              options: ['open', 'closed', 'all'].map((value) => ({ value, label: t(`scope.${value}`) })),
+              onChange: setScopeFilter,
+            }),
+            h(Select, {
+              label: t('filter.byPerson'),
+              value: personFilter === '' ? '' : personFilter,
+              options: [
+                { value: '', label: t('filter.anyone') },
+                ...(typeof viewer === 'string' && viewer !== ''
+                  ? [{ value: viewer, label: `${viewer}（${t('filter.me')}）` }]
+                  : []),
+                ...people.filter((name) => name !== viewer).map((name) => ({ value: name, label: name })),
+              ],
+              onChange: setPersonFilter,
+              grow: '1 1 90px',
+            }),
+            h(Select, {
+              label: t('filter.byRecency'),
+              value: recentHours === null ? 'any' : String(recentHours),
+              options: [
+                { value: 'any', label: t('filter.anyTime') },
+                { value: '1', label: '1h' },
+                { value: '24', label: '24h' },
+                { value: '168', label: '168h' },
+              ],
+              onChange: (value) => setRecentHours(value === 'any' ? null : Number(value)),
+            }),
+            h(Field, {
+              grow: '1 1 90px',
+              value: query,
+              placeholder: t('filter.byText'),
+              'aria-label': t('filter.byText'),
+              onChange: (event) => setQuery(event.target.value),
+            }),
           ),
-          h(Field, {
-            grow: '1 1 100%',
-            value: query,
-            placeholder: t('search.placeholder'),
-            'aria-label': t('search.placeholder'),
-            onChange: (event) => setQuery(event.target.value),
-          }),
           loading && items.length === 0
             ? h(Empty, { title: t('empty.loading') })
             : filtered.length === 0
@@ -1989,12 +2567,8 @@ window.__ModuleLoader__.load({
                       key: `${item.kind}:${item.number}`,
                       item,
                       t,
-                      actions: snapshot?.actions ?? [],
                       reviewConfigured: (snapshot?.lights?.review ?? []).length > 0,
-                      onComment: postComment,
-                      commenting,
-                      onResolve: resolveItem,
-                      resolving,
+                      onContextMenu: (picked, x, y) => setMenu({ item: picked, x, y }),
                       onOpen: (picked) => openInBrowser(picked.url),
                     }),
                   ),
@@ -2005,6 +2579,14 @@ window.__ModuleLoader__.load({
       return h(
         'div',
         { style: S.root, 'data-atomgit-panel': 'panel' },
+        h(RowMenu, {
+          menu,
+          actions: snapshot?.actions ?? [],
+          busy: commenting !== null || resolving !== null,
+          t,
+          onSelect: runMenuEntry,
+          onClose: () => setMenu(null),
+        }),
         h(
           'div',
           { style: S.header },

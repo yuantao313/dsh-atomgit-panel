@@ -2,6 +2,28 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.1.2] - 2026-10-26
+
+### 新增
+
+- **快捷操作组**：一个按钮可同时发评论、加 label、删 label。例如「RDVOK」= 加 `RDV-SUCC` 并移除另外两个 RDV 状态。
+- **label 模板**：添加仓库时按社区识别（CANN / OpenHarmony），只写入该仓库确实存在的 label；仅出现一次，且只在仓库名匹配时自动套用。
+- **label 自动补全**：流水线格子、评审、快捷操作的 label 输入都从仓库的 label 目录取候选，支持中文与大小写不敏感。
+- **筛选栏**：一行四个下拉（类型 / 状态 / 相关人 / 更新）+ 搜索，替换原先堆叠的按钮组；「相关人」的候选来自当前条目里真实出现的作者与指派。
+- 评审与快捷操作的 label 编辑共用同一组件。
+
+### 变更
+
+- 右键菜单首行是不可点击的 `!编号`，评论、标签、解决三个分组用分割线隔开。
+- label 外观改为无边框实心胶囊，文字颜色按背景亮度自动取黑或白。
+- Issue 行不再显示指示灯。
+- 未被指示灯消费的 label 仍以 chip 形式显示在条目上。
+
+### 修复
+
+- 代码检视灯在有数据和无数据时都占同一位置，不再出现两灯、三灯错位。
+- 补齐缺失的界面文案（中文的 `panel.kind`、两种语言的 `panel.refreshing`）。
+
 ## [0.1.1] - 2026-10-26
 
 ### 性能
@@ -54,5 +76,6 @@
 - 内置的 OAuth 应用凭据写在源码中，因此是公开的。AtomGit 的 OAuth 强制要求 `client_secret`，不支持 PKCE 与 device flow，桌面客户端无法真正保密。别人可以发起授权，但拿不到他人的令牌——授权码只在本机接收并兑换。需要隔离时，设 `DSH_ATOMGIT_OAUTH_CLIENT_ID` 与 `DSH_ATOMGIT_OAUTH_CLIENT_SECRET` 覆盖内置值。
 - 写操作只有两项，都需要在界面上主动点击：发送配置好的评论、把检视讨论标记为已解决。不会修改 label、不会合并、不会改 PR 状态。
 
+[0.1.2]: https://atomgit.com/yuantao_/dsh-atomgit-panel/compare/v0.1.1...v0.1.2
 [0.1.1]: https://atomgit.com/yuantao_/dsh-atomgit-panel/compare/v0.1.0...v0.1.1
 [0.1.0]: https://atomgit.com/yuantao_/dsh-atomgit-panel/releases/tag/v0.1.0

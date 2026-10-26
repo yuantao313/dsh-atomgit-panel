@@ -28,7 +28,65 @@ const WEB_HOST = 'https://atomgit.com'
 const OAUTH_TOKEN_URL = `${WEB_HOST}/oauth/token`
 const OAUTH_AUTHORIZE_URL = `${WEB_HOST}/oauth/authorize`
 const CALLBACK_PATH = `${API_BASE}/oauth/callback`
-// Fixed loopback port for OAuth redirects.
+/**
+ * Preset label layouts for the communities this plugin is used in.
+ *
+ * Each template names only labels that were read from those repositories'
+ * label catalogues; a template is applied to a repository whose own catalogue
+ * contains them.
+ */
+const LABEL_TEMPLATES = [
+  {
+    id: 'cann',
+    name: 'CANN',
+    match: /(^|\/)cann($|\/)|^cann-/i,
+    lights: {
+      pipeline: [
+        { SUCCESS: ['ci-pipeline-passed'], RUNNING: ['ci-pipeline-running'], FAILURE: ['ci-pipeline-failed'] },
+      ],
+      review: ['lgtm', 'approved'],
+    },
+  },
+  {
+    id: 'openharmony',
+    name: 'OpenHarmony',
+    match: /^openharmony\//i,
+    lights: {
+      pipeline: [
+        { SUCCESS: ['ci-pipeline-passed'], RUNNING: ['ci-pipeline-running'], FAILURE: ['ci-pipeline-failed'] },
+      ],
+      review: [],
+    },
+  },
+]
+
+/**
+ * Pick at most one template for a repository: the one whose name matches, or
+ * else the one whose labels the repository actually carries.
+ */
+function chooseTemplate(key, names) {
+  const present = new Set((names ?? []).map((name) => name.toLowerCase()))
+  const score = (template) => {
+    const required = [
+      ...template.lights.pipeline.flatMap((row) => [...row.SUCCESS, ...row.RUNNING, ...row.FAILURE]),
+      ...template.lights.review,
+    ]
+    if (required.length === 0) return 0
+    return required.filter((name) => present.has(name.toLowerCase())).length / required.length
+  }
+  // The community name decides which template is named. Labels alone only say
+  // "these lamps fit", not "this is that community's convention".
+  const named = LABEL_TEMPLATES.find((template) => template.match !== null && template.match.test(str(key, 250)))
+  if (named !== undefined) return { template: named, byName: true }
+  let best = null
+  for (const template of LABEL_TEMPLATES) {
+    const value = score(template)
+    if (best === null || value > best.score) best = { template, score: value }
+  }
+  return best !== null && best.score >= 0.9 ? { template: best.template, byName: false } : null
+}
+
+// Fixed loopback port for OAuth redirects.// Fixed loopback port for OAuth redirects.
 const OAUTH_PORT_FALLBACK = 45821
 const ACCOUNT_URL = `${WEB_HOST}/setting`
 
@@ -83,17 +141,29 @@ function repoKey(owner, repo) {
 }
 
 /** A quick action is a caption plus the exact comment it posts. */
+/**
+ * One shortcut button: a caption plus the operations it performs in order —
+ * a comment, labels to add, labels to remove.
+ */
 function normalizeQuickActions(value) {
   if (!Array.isArray(value)) return []
   const out = []
   const seen = new Set()
-  for (const raw of value.slice(0, 12)) {
+  const names = (list) =>
+    (Array.isArray(list) ? list : [])
+      .map((entry) => str(entry, 80).trim())
+      .filter((entry) => entry !== '')
+      .slice(0, 8)
+  for (const raw of value.slice(0, 16)) {
     const record = asRecord(raw) ?? {}
     const key = str(record.key, 16).trim()
+    if (key === '' || seen.has(key)) continue
     const body = str(record.body, 400).trim()
-    if (key === '' || body === '' || seen.has(key)) continue
+    const add = names(record.add)
+    const remove = names(record.remove)
+    if (body === '' && add.length === 0 && remove.length === 0) continue
     seen.add(key)
-    out.push({ key, body })
+    out.push({ key, body, add, remove })
   }
   return out
 }
@@ -231,6 +301,7 @@ function normalizeState(parsed) {
             addedAt: str(record.addedAt, 40) || new Date().toISOString(),
             lights: normalizeLights(record.lights),
             actions: normalizeQuickActions(record.actions),
+            templateOffered: record.templateOffered === true,
           }
         })
         .filter((entry) => entry !== null)
@@ -360,6 +431,9 @@ function commentRecord(raw) {
 export function apply(ctx) {
   let state = loadStateSync()
   const snapshots = new Map()
+  /** Repository label catalogues, shared by the picker and the templates. */
+  const labelCatalogues = new Map()
+  const LABEL_CACHE_MS = 10 * 60 * 1000
   const inflight = new Map()
   const oauthAttempts = new Map()
   const secretCache = new Map()
@@ -439,6 +513,7 @@ export function apply(ctx) {
       addedAt: entry.addedAt,
       lights: entry.lights ?? normalizeLights(null),
       actions: entry.actions ?? [],
+      templateOffered: entry.templateOffered === true,
     }))
   }
 
@@ -449,6 +524,45 @@ export function apply(ctx) {
    * pull request. Only open pull requests are asked about, and the caller caps
    * how many are read in one pass.
    */
+  /**
+   * Read a repository's label catalogue.
+   *
+   * The list endpoint is paginated and the catalogue rarely changes, so the
+   * result is kept for a while and shared by the picker and the templates.
+   */
+  async function labelCatalogue(entry, { force = false } = {}) {
+    const key = repoKey(entry.owner, entry.repo)
+    const cached = labelCatalogues.get(key)
+    if (!force && cached !== undefined && Date.now() - cached.at < LABEL_CACHE_MS) return cached.labels
+    const token = await readSecret(TOKEN_KEY)
+    const pages = []
+    for (let page = 1; page <= 5; page += 1) {
+      const url = repoUrl(entry.owner, entry.repo, `/labels?per_page=100&page=${page}`)
+      let raw
+      try {
+        raw = await requestJson(url, token, AbortSignal.timeout(REQUEST_TIMEOUT_MS))
+      } catch {
+        break
+      }
+      const list = Array.isArray(raw) ? raw : []
+      if (list.length === 0) break
+      pages.push(...list)
+      if (list.length < 100) break
+    }
+    const labels = pages
+      .map((raw) => {
+        const record = asRecord(raw) ?? {}
+        return {
+          name: str(record.name, 80),
+          color: /^#?[0-9a-fA-F]{3,8}$/.test(String(record.color ?? '')) ? String(record.color) : '',
+          description: str(record.description, 200),
+        }
+      })
+      .filter((label) => label.name !== '')
+    labelCatalogues.set(key, { at: Date.now(), labels })
+    return labels
+  }
+
   async function codeReviewOf(entry, number, token) {
     // `comment_type=diff_comment` restricts this to code-review threads; the
     // default would also return ordinary pull-request discussion.
@@ -950,6 +1064,131 @@ export function apply(ctx) {
     return { ok: true, body: text }
   }
 
+  /**
+   * Add or remove one label on an issue or pull request.
+   *
+   * Adding posts the name to the labels endpoint. Removing reads the current
+   * labels first and rewrites the set without the name, because pull requests
+   * only offer a whole-set replacement.
+   */
+  async function toggleLabel(entry, kind, number, name, add) {
+    if (kind !== 'issue' && kind !== 'pr') {
+      return { ok: false, error: { code: 'bad-kind', message: 'kind must be "issue" or "pr"' } }
+    }
+    if (!Number.isFinite(number) || number <= 0) {
+      return { ok: false, error: { code: 'bad-number', message: 'number must be a positive integer' } }
+    }
+    const label = str(name, 80).trim()
+    if (label === '') {
+      return { ok: false, error: { code: 'empty-label', message: 'The label name is empty.' } }
+    }
+    const token = await readSecret(TOKEN_KEY)
+    if (token === null) {
+      return { ok: false, error: { code: 'unauthorized', message: 'Sign in before changing a label.' } }
+    }
+    const base = kind === 'issue' ? 'issues' : 'pulls'
+    const itemPath = `/${base}/${number}`
+
+    if (add) {
+      const result = await mutateJson(repoUrl(entry.owner, entry.repo, `${itemPath}/labels`), token, 'POST', [label])
+      if (result.ok !== true) return result
+      snapshots.delete(repoKey(entry.owner, entry.repo))
+      return { ok: true, action: 'added', label }
+    }
+
+    // Removal: pull requests replace the whole set, issues delete by name.
+    if (kind === 'issue') {
+      const result = await mutateJson(
+        repoUrl(entry.owner, entry.repo, `${itemPath}/labels/${encodeURIComponent(label)}`),
+        token,
+        'DELETE',
+        null,
+      )
+      if (result.ok !== true) return result
+      snapshots.delete(repoKey(entry.owner, entry.repo))
+      return { ok: true, action: 'removed', label }
+    }
+
+    let current
+    try {
+      current = await requestJson(
+        repoUrl(entry.owner, entry.repo, `${itemPath}/labels`),
+        token,
+        AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      )
+    } catch (error) {
+      return { ok: false, error: { code: 'read-failed', message: errorText(error) } }
+    }
+    const names = (Array.isArray(current) ? current : [])
+      .map((raw) => str(asRecord(raw)?.name, 80))
+      .filter((value) => value !== '' && value.toLowerCase() !== label.toLowerCase())
+    const result = await mutateJson(repoUrl(entry.owner, entry.repo, `${itemPath}/labels`), token, 'PUT', names)
+    if (result.ok !== true) return result
+    snapshots.delete(repoKey(entry.owner, entry.repo))
+    return { ok: true, action: 'removed', label }
+  }
+
+  /**
+   * Run a shortcut's operations on one item: comment, then labels to add, then
+   * labels to remove.
+   *
+   * Every step is attempted; the reply lists what succeeded and what did not, so
+   * a partial result is visible rather than silently swallowed.
+   */
+  async function runQuickAction(entry, kind, number, action) {
+    const done = []
+    const failed = []
+    if (action.body !== '') {
+      const result = await postComment(entry, kind, number, action.body)
+      if (result.ok === true) done.push('comment')
+      else failed.push({ step: 'comment', error: result.error })
+    }
+    for (const label of action.add ?? []) {
+      const result = await toggleLabel(entry, kind, number, label, true)
+      if (result.ok === true) done.push(`+${label}`)
+      else failed.push({ step: `+${label}`, error: result.error })
+    }
+    for (const label of action.remove ?? []) {
+      const result = await toggleLabel(entry, kind, number, label, false)
+      if (result.ok === true) done.push(`-${label}`)
+      else failed.push({ step: `-${label}`, error: result.error })
+    }
+    return { ok: failed.length === 0, action: action.key, done, failed }
+  }
+
+  /** One authenticated write that does not return a body worth reading. */
+  async function mutateJson(url, token, method, payload) {
+    let response
+    try {
+      response = await fetch(url, {
+        method,
+        headers: {
+          accept: 'application/json',
+          ...(payload === null ? {} : { 'content-type': 'application/json' }),
+          'PRIVATE-TOKEN': token,
+        },
+        ...(payload === null ? {} : { body: JSON.stringify(payload) }),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      })
+    } catch (error) {
+      return { ok: false, error: { code: 'network', message: errorText(error) } }
+    }
+    if (response.status === 401) return { ok: false, error: { code: 'unauthorized', message: 'AtomGit rejected the token (401).' } }
+    if (response.status === 403) return { ok: false, error: { code: 'forbidden', message: 'AtomGit refused the change (403).' } }
+    if (response.status === 404) return { ok: false, error: { code: 'not-found', message: 'Item or label not found (404).' } }
+    if (!response.ok) {
+      let detail = ''
+      try {
+        const body = asRecord(await response.json())
+        detail = str(body?.message ?? body?.error_message, 200)
+      } catch {
+        /* no body to explain it */
+      }
+      return { ok: false, error: { code: 'http', message: detail || `AtomGit answered HTTP ${response.status}` } }
+    }
+    return { ok: true }
+  }
+
   /** The address AtomGit redirects back to. */
   function callbackUrl() {
     if (callbackPort !== null) return `http://127.0.0.1:${callbackPort}${CALLBACK_PATH}`
@@ -1173,6 +1412,31 @@ export function apply(ctx) {
     }
   }
 
+  /**
+   * Write a template's labels into a repository's configuration.
+   *
+   * Only labels the repository actually carries are written; a pipeline row with
+   * no usable label is dropped.
+   */
+  async function applyTemplate(template, entry) {
+    const catalogue = await labelCatalogue(entry)
+    const present = new Set(catalogue.map((label) => label.name.toLowerCase()))
+    const keep = (name) => present.has(name.toLowerCase())
+    const lights = {
+      pipeline: template.lights.pipeline
+        .map((row) => ({
+          SUCCESS: row.SUCCESS.filter(keep),
+          RUNNING: row.RUNNING.filter(keep),
+          FAILURE: row.FAILURE.filter(keep),
+        }))
+        .filter((row) => row.SUCCESS.length + row.RUNNING.length + row.FAILURE.length > 0),
+      review: template.lights.review.filter(keep),
+      discussions: entry.lights?.discussions === true,
+    }
+    const result = await setRepoConfig(repoKey(entry.owner, entry.repo), { lights })
+    return { ...result, applied: template.id }
+  }
+
   async function addRepo(spec) {
     const parsed = parseRepoSpec(spec)
     if (parsed === null) {
@@ -1198,7 +1462,35 @@ export function apply(ctx) {
     state.watched = [...state.watched, { ...parsed, addedAt: new Date().toISOString() }]
     state.active = key
     await saveState()
-    return { ok: true, key, added: true, state: publicState() }
+
+    // A newly watched repository with a recognisable name gets its label layout
+    // filled in, so the panel shows useful lamps without further setup.
+    const entry = state.watched.find((row) => repoKey(row.owner, row.repo) === key)
+    let applied = null
+    let offered = false
+    if (entry !== undefined) {
+      try {
+        const catalogue = await labelCatalogue(entry)
+        const choice = chooseTemplate(key, catalogue.map((label) => label.name))
+        if (choice !== null) {
+          offered = true
+          if (choice.byName) {
+            const result = await applyTemplate(choice.template, entry)
+            if (result.ok === true) applied = { id: choice.template.id, name: choice.template.name }
+          }
+        }
+      } catch {
+        offered = false
+      }
+      if (offered) {
+        const index = state.watched.findIndex((row) => repoKey(row.owner, row.repo) === key)
+        if (index !== -1) {
+          state.watched[index] = { ...state.watched[index], templateOffered: true }
+          await saveState()
+        }
+      }
+    }
+    return { ok: true, key, added: true, applied, offered, state: publicState() }
   }
 
   async function removeRepo(spec) {
@@ -1382,9 +1674,126 @@ export function apply(ctx) {
           return
         }
 
+        if (method === 'GET' && path === '/labels') {
+          const entry = resolveRepo(url.searchParams.get('repo'))
+          if (entry === null) {
+            sendJson(res, 200, { ok: false, error: { code: 'no-repository', message: 'No watched repository is selected.' } })
+            return
+          }
+          const force = url.searchParams.get('force') === '1'
+          const catalogue = await labelCatalogue(entry, { force })
+          const query = str(url.searchParams.get('q'), 80).trim().toLowerCase()
+          const matches =
+            query === ''
+              ? catalogue.slice(0, 40)
+              : catalogue.filter((label) => label.name.toLowerCase().includes(query)).slice(0, 40)
+          sendJson(res, 200, { ok: true, repo: repoKey(entry.owner, entry.repo), total: catalogue.length, labels: matches })
+          return
+        }
+
+        if (method === 'GET' && path === '/templates') {
+          const entry = resolveRepo(url.searchParams.get('repo'))
+          if (entry === null) {
+            sendJson(res, 200, { ok: true, recommendation: null })
+            return
+          }
+          const key = repoKey(entry.owner, entry.repo)
+          let catalogue = []
+          try {
+            catalogue = await labelCatalogue(entry)
+          } catch {
+            catalogue = []
+          }
+          // The hint belongs to a repository that has just been added. Once the
+          // suggestion was made, or the repository already has lamps configured,
+          // it stays out of the way.
+          const configured =
+            (entry.lights?.pipeline ?? []).length > 0 || (entry.lights?.review ?? []).length > 0
+          const choice =
+            entry.templateOffered === true || configured
+              ? null
+              : chooseTemplate(key, catalogue.map((label) => label.name))
+          sendJson(res, 200, {
+            ok: true,
+            repo: key,
+            recommendation:
+              choice === null
+                ? null
+                : {
+                    id: choice.template.id,
+                    name: choice.template.name,
+                    byName: choice.byName,
+                    lights: choice.template.lights,
+                    missing: [
+                      ...choice.template.lights.pipeline.flatMap((row) => [
+                        ...row.SUCCESS,
+                        ...row.RUNNING,
+                        ...row.FAILURE,
+                      ]),
+                      ...choice.template.lights.review,
+                    ].filter((name) => !catalogue.some((label) => label.name.toLowerCase() === name.toLowerCase())),
+                  },
+          })
+          return
+        }
+
+        if (method === 'POST' && path === '/apply-template') {
+          const body = await readJson(req)
+          const spec = str(body.repo, 250) || null
+          const parsed = parseRepoSpec(spec ?? state.active ?? '')
+          if (parsed === null) {
+            sendJson(res, 200, { ok: false, error: { code: 'no-repository', message: 'No watched repository is selected.' } })
+            return
+          }
+          const entry = resolveRepo(repoKey(parsed.owner, parsed.repo))
+          if (entry === null) {
+            sendJson(res, 200, { ok: false, error: { code: 'not-watched', message: 'That repository is not watched.' } })
+            return
+          }
+          const template = LABEL_TEMPLATES.find((row) => row.id === str(body.template, 40))
+          if (template === undefined) {
+            sendJson(res, 200, { ok: false, error: { code: 'unknown-template', message: 'No such template.' } })
+            return
+          }
+          try {
+            sendJson(res, 200, await applyTemplate(template, entry))
+          } catch {
+            sendJson(res, 200, { ok: false, error: { code: 'apply-failed', message: 'Could not apply the template.' } })
+          }
+          return
+        }
+
         if (method === 'POST' && path === '/repo-config') {
           const body = await readJson(req)
           sendJson(res, 200, await setRepoConfig(body.repo, { lights: body.lights, actions: body.actions }))
+          return
+        }
+
+        if (method === 'POST' && path === '/run-action') {
+          const body = await readJson(req)
+          const entry = resolveRepo(str(body.repo, 250) || null)
+          if (entry === null) {
+            sendJson(res, 200, { ok: false, error: { code: 'no-repository', message: 'No watched repository is selected.' } })
+            return
+          }
+          const action = (entry.actions ?? []).find((row) => row.key === str(body.action, 16))
+          if (action === undefined) {
+            sendJson(res, 200, { ok: false, error: { code: 'unknown-action', message: 'No such quick action.' } })
+            return
+          }
+          sendJson(res, 200, await runQuickAction(entry, str(body.kind, 10), Number(body.number), action))
+          return
+        }
+
+        if (method === 'POST' && path === '/label') {
+          const body = await readJson(req)
+          const entry = resolveRepo(str(body.repo, 250) || null)
+          if (entry === null) {
+            sendJson(res, 200, { ok: false, error: { code: 'no-repository', message: 'No watched repository is selected.' } })
+            return
+          }
+          const add = body.add === true
+          sendJson(res, 200, await toggleLabel(entry, str(body.kind, 10), Number(body.number), str(body.label, 80), add))
           return
         }
 
