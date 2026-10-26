@@ -1,6 +1,6 @@
 {
   "name": "dsh-atomgit-panel",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AtomGit 工作台：OAuth 或令牌登录，关注仓库，在右侧栏追踪 Issue 与 Pull Request。",
   "keywords": [
     "dsh",
@@ -56,7 +56,7 @@
   },
   "homepage": "https://atomgit.com/yuantao_/dsh-atomgit-panel",
   "scripts": {
-    "test": "node --test test/",
+    "test": "node --test test/*.test.js",
     "check": "node --check index.js && node --check client.js"
   },
   "bugs": {

@@ -141,6 +141,7 @@ window.__ModuleLoader__.load({
       'panel.repoSwitch': '切换仓库',
       'panel.refresh': '刷新',
       'panel.updated': '更新于 {time}',
+      'time.justNow': '刚刚更新',
       'panel.openOnAtomGit': '在 AtomGit 打开',
 
       'count.issuesOpen': '待办 Issue',
@@ -258,6 +259,7 @@ window.__ModuleLoader__.load({
       'panel.repoSwitch': 'Switch repository',
       'panel.refresh': 'Refresh',
       'panel.updated': 'Updated {time}',
+      'time.justNow': 'just now',
       'panel.openOnAtomGit': 'Open on AtomGit',
 
       'count.issuesOpen': 'Open issues',
@@ -365,12 +367,12 @@ window.__ModuleLoader__.load({
 
     const postJson = (path, body) => callApi(path, { method: 'POST', body: JSON.stringify(body ?? {}) })
 
-    function formatTime(value) {
+    function formatTime(value, t) {
       if (typeof value !== 'string' || value === '') return ''
       const date = new Date(value)
       if (Number.isNaN(date.getTime())) return value.slice(0, 16).replace('T', ' ')
       const delta = Math.round((Date.now() - date.getTime()) / 1000)
-      if (delta >= 0 && delta < 60) return `${delta}s`
+      if (delta >= 0 && delta < 60) return typeof t === 'function' ? t('time.justNow') : '刚刚更新'
       if (delta >= 60 && delta < 3600) return `${Math.floor(delta / 60)}m`
       if (delta >= 3600 && delta < 86400) return `${Math.floor(delta / 3600)}h`
       if (delta >= 86400 && delta < 86400 * 30) return `${Math.floor(delta / 86400)}d`
@@ -840,7 +842,7 @@ window.__ModuleLoader__.load({
      * the colour still follows the worst state found. Both describe themselves
      * on hover with the exact labels involved.
      */
-    function Lamps({ lights, discussionsRatio, t }) {
+    function Lamps({ lights, reviewConfigured, discussionsRatio, t }) {
       const describe = (slot) => {
         const lamp = lights?.[slot]
         const done = lamp?.state === 'SUCCESS'
@@ -880,12 +882,14 @@ window.__ModuleLoader__.load({
           title: describe('pipeline'),
           'data-atomgit-lamp': `pipeline:${pipeline?.state ?? 'off'}`,
         }),
-        // pie: review
-        h(
-          'span',
-          { style: S.pieWrap, title: describe('review'), 'data-atomgit-lamp': `review:${review?.state ?? 'off'}` },
-          h(PieLamp, { lamp: review }),
-        ),
+        // pie: review, shown only when the repository configured review labels
+        reviewConfigured
+          ? h(
+              'span',
+              { style: S.pieWrap, title: describe('review'), 'data-atomgit-lamp': `review:${review?.state ?? 'off'}` },
+              h(PieLamp, { lamp: review }),
+            )
+          : null,
         // pie: resolved discussions, shown only when the repository opted in
         discussions === null || discussions === undefined
           ? null
@@ -959,11 +963,11 @@ window.__ModuleLoader__.load({
       })
     }
 
-    function ItemRow({ item, onOpen, actions, onComment, commenting, onResolve, resolving, t }) {
+    function ItemRow({ item, onOpen, actions, onComment, commenting, onResolve, resolving, reviewConfigured, t }) {
       const meta = []
       if (item.author) meta.push(item.author)
       if (item.comments > 0) meta.push(`💬 ${item.comments}`)
-      if (item.updatedAt) meta.push(formatTime(item.updatedAt))
+      if (item.updatedAt) meta.push(formatTime(item.updatedAt, t))
       const quick = actions ?? []
       return h(
         'div',
@@ -974,7 +978,7 @@ window.__ModuleLoader__.load({
           h(
             'span',
             { style: S.rowTop },
-            h(Lamps, { lights: item.lights, discussionsRatio: item.discussions, t }),
+            h(Lamps, { lights: item.lights, reviewConfigured, discussionsRatio: item.discussions, t }),
             h(
               'span',
               { style: { ...S.rowNumber, color: toneColor(item.kind === 'pr' ? 'brand' : 'idle') } },
@@ -1051,7 +1055,7 @@ window.__ModuleLoader__.load({
               )
             : entry.title,
         ),
-        h('span', { style: { marginLeft: 'auto', color: C.muted, flex: 'none' } }, formatTime(entry.at)),
+        h('span', { style: { marginLeft: 'auto', color: C.muted, flex: 'none' } }, formatTime(entry.at, t)),
       )
     }
 
@@ -1899,7 +1903,7 @@ window.__ModuleLoader__.load({
       const failed = snapshot?.ok === false
 
       const headerMeta = [signedIn ? meta?.auth?.login ?? 'AtomGit' : t('auth.notSignedIn')]
-      if (snapshot?.fetchedAt) headerMeta.push(t('panel.updated').replace('{time}', formatTime(snapshot.fetchedAt)))
+      if (snapshot?.fetchedAt) headerMeta.push(t('panel.updated').replace('{time}', formatTime(snapshot.fetchedAt, t)))
 
       let body
       if (watched.length === 0) {
@@ -1986,6 +1990,7 @@ window.__ModuleLoader__.load({
                       item,
                       t,
                       actions: snapshot?.actions ?? [],
+                      reviewConfigured: (snapshot?.lights?.review ?? []).length > 0,
                       onComment: postComment,
                       commenting,
                       onResolve: resolveItem,

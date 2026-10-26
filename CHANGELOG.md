@@ -2,7 +2,7 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
-## [未发布]
+## [0.1.1] - 2026-10-26
 
 ### 性能
 
@@ -16,6 +16,12 @@
 
 - 移除未再使用的 `normalizeLabelRules` 与 `LIGHT_SLOTS`。
 - 新增测试（`npm test`，用 Node 内置 test runner，无额外依赖），覆盖凭据键名格式、指示灯计算、配置归一化与状态归一化。
+
+### 新增
+
+- 插件图标换为 GitCode 品牌图。原图背景不透明，已做近白键控转透明，避免深色主题下显示为白块。
+- CI 工作流：开发分支与合并请求上跑语法检查、测试、清单一致性检查，Node 22 与 24 各跑一遍。
+- 镜像工作流：GitHub 收到 main 分支或 `v*` 标签的推送后，自动推送到 AtomGit。
 
 ## [0.1.0] - 2026-10-26
 
@@ -48,5 +54,5 @@
 - 内置的 OAuth 应用凭据写在源码中，因此是公开的。AtomGit 的 OAuth 强制要求 `client_secret`，不支持 PKCE 与 device flow，桌面客户端无法真正保密。别人可以发起授权，但拿不到他人的令牌——授权码只在本机接收并兑换。需要隔离时，设 `DSH_ATOMGIT_OAUTH_CLIENT_ID` 与 `DSH_ATOMGIT_OAUTH_CLIENT_SECRET` 覆盖内置值。
 - 写操作只有两项，都需要在界面上主动点击：发送配置好的评论、把检视讨论标记为已解决。不会修改 label、不会合并、不会改 PR 状态。
 
-[未发布]: https://atomgit.com/yuantao_/dsh-atomgit-panel/compare/v0.1.0...HEAD
+[0.1.1]: https://atomgit.com/yuantao_/dsh-atomgit-panel/compare/v0.1.0...v0.1.1
 [0.1.0]: https://atomgit.com/yuantao_/dsh-atomgit-panel/releases/tag/v0.1.0
