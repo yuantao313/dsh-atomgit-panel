@@ -28,6 +28,60 @@ const WEB_HOST = 'https://atomgit.com'
 const OAUTH_TOKEN_URL = `${WEB_HOST}/oauth/token`
 const OAUTH_AUTHORIZE_URL = `${WEB_HOST}/oauth/authorize`
 const CALLBACK_PATH = `${API_BASE}/oauth/callback`
+/**
+ * Preset label layouts for the communities this plugin is used in.
+ *
+ * Each template names only labels that were read from those repositories'
+ * label catalogues; a template is applied to a repository whose own catalogue
+ * contains them.
+ */
+const LABEL_TEMPLATES = [
+  {
+    id: 'cann',
+    name: 'CANN',
+    description: 'CANN 社区：CLA、检视与两条流水线',
+    match: /(^|\/)cann($|\/)|^cann-/i,
+    lights: {
+      pipeline: [
+        { SUCCESS: ['ci-pipeline-passed'], RUNNING: ['ci-pipeline-running'], FAILURE: ['ci-pipeline-failed'] },
+        { SUCCESS: ['RDV-SUCC'], RUNNING: ['RDV-RUNNING'], FAILURE: ['RDV-FAIL'] },
+      ],
+      review: ['lgtm', 'approved'],
+    },
+    recommended: [
+      { key: 'L', body: '/lgtm' },
+      { key: 'A', body: '/approve' },
+      { key: 'L+A', body: '/lgtm\n/approve' },
+    ],
+  },
+  {
+    id: 'openharmony',
+    name: 'OpenHarmony',
+    description: 'OpenHarmony 社区：流水线三件套（该社区无 lgtm/approved）',
+    match: /^openharmony\//i,
+    lights: {
+      pipeline: [
+        { SUCCESS: ['ci-pipeline-passed'], RUNNING: ['ci-pipeline-running'], FAILURE: ['ci-pipeline-failed'] },
+      ],
+      review: [],
+    },
+    recommended: [],
+  },
+  {
+    id: 'generic',
+    name: '通用',
+    description: '只有流水线三件套，适用于任意使用该命名的仓库',
+    match: null,
+    lights: {
+      pipeline: [
+        { SUCCESS: ['ci-pipeline-passed'], RUNNING: ['ci-pipeline-running'], FAILURE: ['ci-pipeline-failed'] },
+      ],
+      review: [],
+    },
+    recommended: [],
+  },
+]
+
 // Fixed loopback port for OAuth redirects.
 const OAUTH_PORT_FALLBACK = 45821
 const ACCOUNT_URL = `${WEB_HOST}/setting`
@@ -360,6 +414,9 @@ function commentRecord(raw) {
 export function apply(ctx) {
   let state = loadStateSync()
   const snapshots = new Map()
+  /** Repository label catalogues, shared by the picker and the templates. */
+  const labelCatalogues = new Map()
+  const LABEL_CACHE_MS = 10 * 60 * 1000
   const inflight = new Map()
   const oauthAttempts = new Map()
   const secretCache = new Map()
@@ -449,6 +506,45 @@ export function apply(ctx) {
    * pull request. Only open pull requests are asked about, and the caller caps
    * how many are read in one pass.
    */
+  /**
+   * Read a repository's label catalogue.
+   *
+   * The list endpoint is paginated and the catalogue rarely changes, so the
+   * result is kept for a while and shared by the picker and the templates.
+   */
+  async function labelCatalogue(entry, { force = false } = {}) {
+    const key = repoKey(entry.owner, entry.repo)
+    const cached = labelCatalogues.get(key)
+    if (!force && cached !== undefined && Date.now() - cached.at < LABEL_CACHE_MS) return cached.labels
+    const token = await readSecret(TOKEN_KEY)
+    const pages = []
+    for (let page = 1; page <= 5; page += 1) {
+      const url = repoUrl(entry.owner, entry.repo, `/labels?per_page=100&page=${page}`)
+      let raw
+      try {
+        raw = await requestJson(url, token, AbortSignal.timeout(REQUEST_TIMEOUT_MS))
+      } catch {
+        break
+      }
+      const list = Array.isArray(raw) ? raw : []
+      if (list.length === 0) break
+      pages.push(...list)
+      if (list.length < 100) break
+    }
+    const labels = pages
+      .map((raw) => {
+        const record = asRecord(raw) ?? {}
+        return {
+          name: str(record.name, 80),
+          color: /^#?[0-9a-fA-F]{3,8}$/.test(String(record.color ?? '')) ? String(record.color) : '',
+          description: str(record.description, 200),
+        }
+      })
+      .filter((label) => label.name !== '')
+    labelCatalogues.set(key, { at: Date.now(), labels })
+    return labels
+  }
+
   async function codeReviewOf(entry, number, token) {
     // `comment_type=diff_comment` restricts this to code-review threads; the
     // default would also return ordinary pull-request discussion.
@@ -1379,6 +1475,112 @@ export function apply(ctx) {
         if (method === 'POST' && path === '/repos/active') {
           const body = await readJson(req)
           sendJson(res, 200, await setActive(body.repo === null ? null : body.repo))
+          return
+        }
+
+        if (method === 'GET' && path === '/labels') {
+          const entry = resolveRepo(url.searchParams.get('repo'))
+          if (entry === null) {
+            sendJson(res, 200, { ok: false, error: { code: 'no-repository', message: 'No watched repository is selected.' } })
+            return
+          }
+          const force = url.searchParams.get('force') === '1'
+          const catalogue = await labelCatalogue(entry, { force })
+          const query = str(url.searchParams.get('q'), 80).trim().toLowerCase()
+          const matches =
+            query === ''
+              ? catalogue.slice(0, 40)
+              : catalogue.filter((label) => label.name.toLowerCase().includes(query)).slice(0, 40)
+          sendJson(res, 200, { ok: true, repo: repoKey(entry.owner, entry.repo), total: catalogue.length, labels: matches })
+          return
+        }
+
+        if (method === 'GET' && path === '/templates') {
+          const entry = resolveRepo(url.searchParams.get('repo'))
+          const key = entry === null ? '' : repoKey(entry.owner, entry.repo)
+          // A template is offered when the repository's own catalogue carries its
+          // labels, so applying one never writes a name AtomGit does not know.
+          let catalogue = []
+          if (entry !== null) {
+            try {
+              catalogue = await labelCatalogue(entry)
+            } catch {
+              catalogue = []
+            }
+          }
+          const present = new Set(catalogue.map((label) => label.name.toLowerCase()))
+          const templates = LABEL_TEMPLATES.map((template) => {
+            const required = [
+              ...template.lights.pipeline.flatMap((row) => [...row.SUCCESS, ...row.RUNNING, ...row.FAILURE]),
+              ...template.lights.review,
+            ]
+            const available = required.filter((name) => present.has(name.toLowerCase()))
+            return {
+              id: template.id,
+              name: template.name,
+              description: template.description,
+              score: required.length === 0 ? 0 : available.length / required.length,
+              suggested: template.match !== null && template.match.test(key),
+              available,
+              missing: required.filter((name) => !present.has(name.toLowerCase())),
+              lights: template.lights,
+              recommended: template.recommended,
+            }
+          })
+          sendJson(res, 200, { ok: true, repo: key, templates })
+          return
+        }
+
+        if (method === 'POST' && path === '/apply-template') {
+          const body = await readJson(req)
+          const template = LABEL_TEMPLATES.find((row) => row.id === str(body.template, 40))
+          if (template === undefined) {
+            sendJson(res, 200, { ok: false, error: { code: 'unknown-template', message: 'No such template.' } })
+            return
+          }
+          const spec = str(body.repo, 250) || null
+          const parsed = parseRepoSpec(spec ?? state.active ?? '')
+          if (parsed === null) {
+            sendJson(res, 200, { ok: false, error: { code: 'no-repository', message: 'No watched repository is selected.' } })
+            return
+          }
+          const entry = resolveRepo(repoKey(parsed.owner, parsed.repo))
+          if (entry === null) {
+            sendJson(res, 200, { ok: false, error: { code: 'not-watched', message: 'That repository is not watched.' } })
+            return
+          }
+          // Only labels the repository actually has are applied.
+          let catalogue = []
+          try {
+            catalogue = await labelCatalogue(entry)
+          } catch {
+            sendJson(res, 200, { ok: false, error: { code: 'catalogue-failed', message: 'Could not read the label catalogue.' } })
+            return
+          }
+          const present = new Set(catalogue.map((label) => label.name.toLowerCase()))
+          const keep = (name) => present.has(name.toLowerCase())
+          const lights = {
+            pipeline: template.lights.pipeline
+              .map((row) => ({
+                SUCCESS: row.SUCCESS.filter(keep),
+                RUNNING: row.RUNNING.filter(keep),
+                FAILURE: row.FAILURE.filter(keep),
+              }))
+              .filter((row) => row.SUCCESS.length + row.RUNNING.length + row.FAILURE.length > 0),
+            review: template.lights.review.filter(keep),
+            discussions: entry.lights?.discussions === true,
+          }
+          const actions =
+            (entry.actions ?? []).length > 0 ? entry.actions : template.recommended.slice(0, 12)
+          const result = await setRepoConfig(repoKey(parsed.owner, parsed.repo), { lights, actions })
+          sendJson(res, 200, {
+            ...result,
+            applied: template.id,
+            skipped: template.lights.pipeline
+              .flatMap((row) => [...row.SUCCESS, ...row.RUNNING, ...row.FAILURE])
+              .concat(template.lights.review)
+              .filter((name) => !keep(name)),
+          })
           return
         }
 

@@ -187,6 +187,17 @@ window.__ModuleLoader__.load({
       'lamp.hint.review': '评审 label',
       'lamp.reviewEmpty': '还没有评审 label，点「添加」新建一条。',
       'lamp.reviewAdd': '添加评审 label',
+      'tpl.title': '模板',
+      'tpl.loading': '正在读取仓库 label…',
+      'tpl.recommended': '推荐',
+      'tpl.preview': '看模式',
+      'tpl.hide': '收起',
+      'tpl.apply': '套用',
+      'tpl.missing': '缺 {n} 个 label',
+      'tpl.shape': '将写入的模式',
+      'tpl.noReview': '不设评审',
+      'tpl.skipped': '该仓库没有、会被跳过',
+      'tpl.applyHint': '套用只写入本仓库确实存在的 label；已有的快捷评论会保留。',
       'lamp.discussions': '代码检视',
       'lamp.discussionsNone': '代码检视',
       'lamp.discussionsClean': '无未解决项',
@@ -306,6 +317,17 @@ window.__ModuleLoader__.load({
       'lamp.hint.review': 'review label',
       'lamp.reviewEmpty': 'No review label yet. Press Add to create one.',
       'lamp.reviewAdd': 'Add review label',
+      'tpl.title': 'Templates',
+      'tpl.loading': 'Reading repository labels…',
+      'tpl.recommended': 'Suggested',
+      'tpl.preview': 'Show pattern',
+      'tpl.hide': 'Hide',
+      'tpl.apply': 'Apply',
+      'tpl.missing': '{n} label(s) missing',
+      'tpl.shape': 'Pattern that will be written',
+      'tpl.noReview': 'no review labels',
+      'tpl.skipped': 'Absent here, will be skipped',
+      'tpl.applyHint': 'Only labels this repository has are written; existing quick comments are kept.',
       'lamp.discussions': 'Code review',
       'lamp.discussionsNone': 'Code review',
       'lamp.discussionsClean': 'nothing unresolved',
@@ -449,6 +471,72 @@ window.__ModuleLoader__.load({
         lineHeight: 1.45,
         resize: 'vertical',
         whiteSpace: 'pre-wrap',
+      },
+      suggest: {
+        position: 'absolute',
+        top: '100%',
+        left: 0,
+        right: 0,
+        zIndex: 20,
+        marginTop: 2,
+        border: `0.5px solid ${C.border2}`,
+        borderRadius: 6,
+        background: C.layer1,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+        display: 'flex',
+        flexDirection: 'column',
+        maxHeight: 168,
+        overflowY: 'auto',
+        padding: 2,
+      },
+      suggestItem: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 5,
+        border: 'none',
+        background: 'transparent',
+        color: C.text,
+        font: 'inherit',
+        fontSize: 11,
+        textAlign: 'left',
+        padding: '3px 5px',
+        borderRadius: 4,
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      },
+      suggestDot: (color) => ({
+        width: 7,
+        height: 7,
+        borderRadius: '50%',
+        flex: 'none',
+        background: /^#?[0-9a-fA-F]{3,8}$/.test(String(color ?? '')) ? `#${String(color).replace(/^#/, '')}` : C.muted,
+      }),
+      templateRow: {
+        border: `0.5px solid ${C.border}`,
+        borderRadius: 6,
+        padding: '5px 8px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 3,
+        background: C.base,
+      },
+      templateTag: {
+        fontSize: 9.5,
+        fontWeight: 700,
+        color: C.brand,
+        border: `0.5px solid ${C.brand}`,
+        borderRadius: 999,
+        padding: '0 5px',
+        lineHeight: '13px',
+        flex: 'none',
+      },
+      templateBody: { display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 2 },
+      templateShape: {
+        fontSize: 10.5,
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+        color: C.text,
       },
       tagCloud: { display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' },
       tagChip: {
@@ -1272,6 +1360,180 @@ window.__ModuleLoader__.load({
      * running and failure labels. The review box lists the labels an item must
      * all carry to count as reviewed.
      */
+    /**
+     * A label input that suggests names from the repository's own catalogue.
+     *
+     * Typing filters the catalogue; picking a suggestion fills the field. The
+     * value stays free text so a label the catalogue has not caught up with can
+     * still be typed.
+     */
+    function LabelField({ repo, value, placeholder, onChange, t, ...rest }) {
+      const [suggestions, setSuggestions] = useState([])
+      const [focused, setFocused] = useState(false)
+
+      useEffect(() => {
+        const query = String(value ?? '').trim()
+        if (!focused) return undefined
+        let alive = true
+        const timer = setTimeout(() => {
+          callApi(`/labels?repo=${encodeURIComponent(repo)}&q=${encodeURIComponent(query)}`).then((result) => {
+            if (!alive) return
+            setSuggestions(result?.ok === true ? result.labels : [])
+          })
+        }, 180)
+        return () => {
+          alive = false
+          clearTimeout(timer)
+        }
+      }, [repo, value, focused])
+
+      const shown = focused ? suggestions.slice(0, 8) : []
+      return h(
+        'span',
+        { style: { position: 'relative', display: 'inline-flex', flex: '1 1 auto', minWidth: 0 } },
+        h('input', {
+          ...rest,
+          style: { ...S.input, width: '100%' },
+          value,
+          placeholder,
+          spellCheck: false,
+          onFocus: () => setFocused(true),
+          onBlur: () => setTimeout(() => setFocused(false), 120),
+          onChange,
+        }),
+        shown.length === 0
+          ? null
+          : h(
+              'span',
+              { style: S.suggest, 'data-atomgit-suggest': '1' },
+              shown.map((label) =>
+                h(
+                  'button',
+                  {
+                    key: label.name,
+                    type: 'button',
+                    style: S.suggestItem,
+                    onMouseDown: (event) => {
+                      // mousedown keeps focus long enough to register the pick
+                      event.preventDefault()
+                      onChange({ target: { value: label.name } })
+                      setFocused(false)
+                    },
+                  },
+                  h('span', { style: S.suggestDot(label.color) }),
+                  label.name,
+                ),
+              ),
+            ),
+      )
+    }
+
+    /**
+     * Preset layouts for the repository being edited.
+     *
+     * A template is shown with the shape it would install, so the choice is made
+     * on the pattern rather than on a name. Only templates whose labels exist in
+     * this repository can be applied.
+     */
+    function TemplatePicker({ repo, t, onApplied }) {
+      const [templates, setTemplates] = useState(null)
+      const [open, setOpen] = useState(null)
+      const [busy, setBusy] = useState(null)
+
+      useEffect(() => {
+        let alive = true
+        setTemplates(null)
+        callApi(`/templates?repo=${encodeURIComponent(repo)}`).then((result) => {
+          if (!alive) return
+          setTemplates(result?.ok === true ? result.templates : [])
+        })
+        return () => {
+          alive = false
+        }
+      }, [repo])
+
+      const apply = async (template) => {
+        setBusy(template.id)
+        try {
+          const result = await postJson('/apply-template', { repo, template: template.id })
+          if (result?.ok === true) {
+            setOpen(null)
+            onApplied()
+          }
+        } finally {
+          setBusy(null)
+        }
+      }
+
+      if (templates === null) return h('div', { style: { fontSize: 10.5, color: C.muted } }, t('tpl.loading'))
+      if (templates.length === 0) return null
+
+      const shape = (template) => {
+        const rows = template.lights.pipeline
+          .map((row) => `${row.SUCCESS.join('/') || '—'} · ${row.RUNNING.join('/') || '—'} · ${row.FAILURE.join('/') || '—'}`)
+        const review = template.lights.review.length > 0 ? template.lights.review.join(' + ') : t('tpl.noReview')
+        return { rows, review }
+      }
+
+      return h(
+        'div',
+        { style: { display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }, 'data-atomgit-templates': '1' },
+        h('div', { style: { ...S.label, fontWeight: 700 } }, t('tpl.title')),
+        templates.map((template) => {
+          const parts = shape(template)
+          const usable = template.missing.length === 0
+          const expanded = open === template.id
+          return h(
+            'div',
+            { key: template.id, style: S.templateRow, 'data-atomgit-template': template.id },
+            h(
+              'div',
+              { style: { display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexWrap: 'wrap' } },
+              h('span', { style: { fontWeight: 700, fontSize: 11.5 } }, template.name),
+              template.suggested
+                ? h('span', { style: S.templateTag }, t('tpl.recommended'))
+                : null,
+              h('span', { style: { fontSize: 10.5, color: C.muted, minWidth: 0 } }, template.description),
+              h(
+                'span',
+                { style: { marginLeft: 'auto', display: 'inline-flex', gap: 4, flex: 'none' } },
+                h(Btn, { onClick: () => setOpen(expanded ? null : template.id) }, expanded ? t('tpl.hide') : t('tpl.preview')),
+                usable
+                  ? h(Btn, {
+                      variant: 'primary',
+                      disabled: busy !== null,
+                      onClick: () => apply(template),
+                    }, busy === template.id ? t('common.saving') : t('tpl.apply'))
+                  : h('span', { style: { fontSize: 10, color: C.muted, alignSelf: 'center' } },
+                      t('tpl.missing').replace('{n}', String(template.missing.length))),
+              ),
+            ),
+            expanded
+              ? h(
+                  'div',
+                  { style: S.templateBody },
+                  h('div', { style: { ...S.label, marginTop: 2 } }, t('tpl.shape')),
+                  parts.rows.map((line, index) =>
+                    h('div', { key: index, style: S.templateShape },
+                      `${t('settings.pipeline')} ${index + 1}: ${line}`),
+                  ),
+                  h('div', { style: S.templateShape }, `${t('lamp.review')}: ${parts.review}`),
+                  template.recommended.length > 0
+                    ? h('div', { style: S.templateShape },
+                        `${t('settings.quickActions')}: ${template.recommended.map((a) => `${a.key} → ${a.body.replace('\n', ' + ')}`).join('  ·  ')}`)
+                    : null,
+                  template.missing.length > 0
+                    ? h('div', { style: { ...S.templateShape, color: C.warn } },
+                        `${t('tpl.skipped')}: ${template.missing.join(', ')}`)
+                    : null,
+                  h('div', { style: { ...S.templateShape, color: C.muted } }, t('tpl.applyHint')),
+                )
+              : null,
+          )
+        }),
+      )
+    }
+
     function LampEditor({ repo, lights, actions, t, onSave, busy }) {
       const [rows, setRows] = useState(() => {
         const list = (lights?.pipeline ?? []).map((row) => ({
@@ -1307,11 +1569,11 @@ window.__ModuleLoader__.load({
       }
 
       const cell = (index, state) =>
-        h('input', {
-          style: { ...S.input, flex: '1 1 0', minWidth: 0, fontSize: 11.5 },
+        h(LabelField, {
+          repo,
+          style: { fontSize: 11.5 },
           value: rows[index][state],
           placeholder: t(`lamp.hint.${state}`),
-          spellCheck: false,
           'data-atomgit-cell': `${index}:${state}`,
           onChange: (event) =>
             setRows((current) =>
@@ -1400,11 +1662,10 @@ window.__ModuleLoader__.load({
         h(
           'div',
           { style: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 } },
-          h('input', {
-            style: { ...S.input, flex: '1 1 auto', fontSize: 11.5 },
+          h(LabelField, {
+            repo,
             value: reviewDraft,
             placeholder: t('lamp.hint.review'),
-            spellCheck: false,
             'data-atomgit-review-draft': '1',
             onChange: (event) => setReviewDraft(event.target.value),
             onKeyDown: (event) => {
@@ -1499,6 +1760,7 @@ window.__ModuleLoader__.load({
       const [flash, setFlash] = useState(null)
       const [repoDraft, setRepoDraft] = useState('')
       const [editorRepo, setEditorRepo] = useState(null)
+      const [editorEpoch, setEditorEpoch] = useState(0)
       const [intervalDraft, setIntervalDraft] = useState('')
       const mounted = useRef(true)
 
@@ -1682,7 +1944,24 @@ window.__ModuleLoader__.load({
                             onClick: () => removeRepo(entry.key),
                           }, t('settings.repoRemove')),
                         ),
-                        h(LampEditor, { repo: entry.key, lights: entry.lights, actions: entry.actions, t, busy, onSave: saveLights }),
+                        h(TemplatePicker, {
+                          repo: entry.key,
+                          t,
+                          onApplied: () => {
+                            // Re-read the repository config, then remount the editor
+                            // so its fields show what the template wrote.
+                            Promise.resolve(load()).then(() => setEditorEpoch((n) => n + 1))
+                          },
+                        }),
+                        h(LampEditor, {
+                          key: `${entry.key}:${editorEpoch}`,
+                          repo: entry.key,
+                          lights: entry.lights,
+                          actions: entry.actions,
+                          t,
+                          busy,
+                          onSave: saveLights,
+                        }),
                       )
                     })(),
               ),
