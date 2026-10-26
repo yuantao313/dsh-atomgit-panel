@@ -1,10 +1,10 @@
-# dsh-atomgit-sync bundle patch.
+# dsh-atomgit-panel bundle patch.
 #
 # One row, host + client faces: the Host half registers the loopback-only
-# `/api/dsh-atomgit-sync/**` route and the `atomgit_tracker` tool; the
+# `/api/dsh-atomgit-panel/**` route and the `atomgit_tracker` tool; the
 # `dsh.client` declaration in package.json makes the browser half load in the
 # Web GUI, where it contributes the right-sidebar tab type, its body and chip,
 # and a conversation-header entry.
 - insert:
     - id: atomgit-sync
-      name: 'dsh-atomgit-sync'
+      name: 'dsh-atomgit-panel'

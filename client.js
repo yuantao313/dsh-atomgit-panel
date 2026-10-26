@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-  id: 'dsh-atomgit-sync',
+  id: 'dsh-atomgit-panel',
   factory(require) {
     const React = require('react')
     const h = React.createElement
@@ -96,7 +96,7 @@ window.__ModuleLoader__.load({
     const TAB_KIND = 'atomgit'
     const TAB_ID = 'atomgit-sync'
     const SETTINGS_ID = 'atomgit-sync'
-    const ROUTE = 'api/dsh-atomgit-sync'
+    const ROUTE = 'api/dsh-atomgit-panel'
 
     const zh = {
       'guide.title': 'AtomGit 工作台',

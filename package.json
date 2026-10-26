@@ -1,7 +1,7 @@
 {
-  "name": "dsh-atomgit-sync",
+  "name": "dsh-atomgit-panel",
   "version": "0.1.0",
-  "description": "AtomGit 工作台：令牌或 OAuth 登录，关注仓库，在右侧栏追踪 Issue 与 Pull Request。",
+  "description": "AtomGit 工作台：OAuth 或令牌登录，关注仓库，在右侧栏追踪 Issue 与 Pull Request。",
   "keywords": [
     "dsh",
     "deepseek-harness",

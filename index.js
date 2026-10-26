@@ -1,7 +1,7 @@
 /**
  * AtomGit Workbench — host half.
  *
- * Serves the loopback REST route `/api/dsh-atomgit-sync/**` used by the
+ * Serves the loopback REST route `/api/dsh-atomgit-panel/**` used by the
  * browser half, and registers the `atomgit_tracker` tool.
  *
  * Stored credentials:
@@ -22,7 +22,7 @@ export const name = 'atomgit-sync'
 
 export const inject = ['webServer', 'tools']
 
-const API_BASE = '/api/dsh-atomgit-sync'
+const API_BASE = '/api/dsh-atomgit-panel'
 const API_HOST = 'https://api.atomgit.com'
 const WEB_HOST = 'https://atomgit.com'
 const OAUTH_TOKEN_URL = `${WEB_HOST}/oauth/token`
@@ -31,19 +31,18 @@ const CALLBACK_PATH = `${API_BASE}/oauth/callback`
 const ACCOUNT_URL = `${WEB_HOST}/setting`
 
 /**
- * OAuth application credentials. They are read from the environment so that a
- * published copy carries no secret; a user who registers their own AtomGit OAuth
- * application points these at it.
+ * OAuth application credentials. An environment value replaces the built-in one.
  */
-const OAUTH_CLIENT_ID = String(process.env.DSH_ATOMGIT_OAUTH_CLIENT_ID ?? '').trim()
-const OAUTH_CLIENT_SECRET = String(process.env.DSH_ATOMGIT_OAUTH_CLIENT_SECRET ?? '').trim()
+const OAUTH_CLIENT_ID = String(process.env.DSH_ATOMGIT_OAUTH_CLIENT_ID ?? '').trim() || '913cc3eb5a8643aab029131ec38da9d8'
+const OAUTH_CLIENT_SECRET =
+  String(process.env.DSH_ATOMGIT_OAUTH_CLIENT_SECRET ?? '').trim() || '575abd52cda84db389466b765c0fc9bd'
 const OAUTH_ENABLED = OAUTH_CLIENT_ID !== '' && OAUTH_CLIENT_SECRET !== ''
 
 const TOKEN_KEY = 'DSH_ATOMGIT_TOKEN'
 const REFRESH_KEY = 'DSH_ATOMGIT_REFRESH'
 
 const HOME = process.env.DSH_HOME || join(homedir(), '.dsh')
-const DATA_DIR = join(HOME, 'dsh-atomgit-sync')
+const DATA_DIR = join(HOME, 'dsh-atomgit-panel')
 const STATE_FILE = join(DATA_DIR, 'state.json')
 
 const MAX_ITEMS = 60

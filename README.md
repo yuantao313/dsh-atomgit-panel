@@ -1,4 +1,4 @@
-# AtomGit 工作台（dsh-atomgit-sync）
+# AtomGit 工作台（dsh-atomgit-panel）
 
 连接 [AtomGit](https://atomgit.com)（API：`api.atomgit.com`），在右侧栏追踪多个关注仓库的 Issue 与 Pull Request，并记录每次同步的变更。
 
@@ -16,7 +16,11 @@
   - **OAuth 登录** —— 在本机打开 AtomGit 授权页，授权完成后自动回到本机。
 - 登录后输入框位置不变，显示掩码令牌（只保留末 4 位），置灰、不可编辑、不可选中复制；两个按钮换成「个人信息」与「注销」，个人信息用系统浏览器打开 `atomgit.com/setting`。
 
-OAuth 是可选的。仓库内不保存任何 OAuth 密钥：要让「OAuth 登录」按钮出现，需自行注册 AtomGit OAuth 应用，并把凭据放进环境变量 `DSH_ATOMGIT_OAUTH_CLIENT_ID` 与 `DSH_ATOMGIT_OAUTH_CLIENT_SECRET`，回调地址填 `http://127.0.0.1:59058/api/dsh-atomgit-sync/oauth/callback`。未配置时该按钮不显示，只保留令牌登录。
+**OAuth 登录开箱可用**，不需要自己注册 AtomGit 应用。授权在系统浏览器里完成，回调由本机进程接收。
+
+内置的 OAuth 应用凭据写在源码里，因此是公开的。AtomGit 的 OAuth 只支持 `client_secret`（没有 PKCE），客户端应用无法真正保密；这里的取舍是：任何人都能用这个应用完成授权，但拿不到别人的令牌——授权码只在本机回调接收并兑换。
+
+如需隔离，注册自己的 OAuth 应用并设置 `DSH_ATOMGIT_OAUTH_CLIENT_ID` 与 `DSH_ATOMGIT_OAUTH_CLIENT_SECRET` 覆盖内置值；回调地址填 `http://127.0.0.1:59058/api/dsh-atomgit-panel/oauth/callback`。
 
 ### 关注的仓库
 
@@ -78,7 +82,7 @@ OAuth 是可选的。仓库内不保存任何 OAuth 密钥：要让「OAuth 登�
 
 ## 接口
 
-Host 只开放 loopback 同源的 `/api/dsh-atomgit-sync/**`。
+Host 只开放 loopback 同源的 `/api/dsh-atomgit-panel/**`。
 
 | 方法与路径 | 说明 |
 | --- | --- |
