@@ -169,6 +169,9 @@ window.__ModuleLoader__.load({
       'filter.personPlaceholder': '输入人名，或选择',
       'filter.me': '我',
       'filter.anyone': '任何人',
+      'workspace.notAtomGit': '当前工作区不是 AtomGit 项目',
+      'workspace.fork': 'fork',
+      'workspace.pick': '仓库',
       'filter.anyTime': '不限更新',
 
       'state.open': '开启',
@@ -209,6 +212,8 @@ window.__ModuleLoader__.load({
       'lamp.discussionsClean': '无未解决项',
       'action.resolve': '全部解决',
       'menu.open': '在 AtomGit 打开',
+      'menu.pull': '拉取到本地',
+      'menu.pulled': '已检出 {branch}，来自 {source}',
       'menu.resolve': '解决全部 {n} 条检视意见',
       'settings.discussions': '跟踪代码检视',
       'settings.discussionsHint': '每个 PR 多一次请求',
@@ -305,6 +310,9 @@ window.__ModuleLoader__.load({
       'filter.personPlaceholder': 'Type or pick a name',
       'filter.me': 'me',
       'filter.anyone': 'anyone',
+      'workspace.notAtomGit': 'This workspace is not an AtomGit project',
+      'workspace.fork': 'fork',
+      'workspace.pick': 'Repository',
       'filter.anyTime': 'any time',
 
       'state.open': 'Open',
@@ -345,6 +353,8 @@ window.__ModuleLoader__.load({
       'lamp.discussionsClean': 'nothing unresolved',
       'action.resolve': 'Resolve all',
       'menu.open': 'Open in AtomGit',
+      'menu.pull': 'Pull to local',
+      'menu.pulled': 'Checked out {branch} from {source}',
       'menu.resolve': 'Resolve all {n} review threads',
       'settings.discussions': 'Track code review',
       'settings.discussionsHint': 'one extra request per PR',
@@ -556,6 +566,30 @@ window.__ModuleLoader__.load({
       },
 
 
+      workspaceDock: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        minWidth: 0,
+        padding: '3px 8px',
+        margin: '0 0 4px',
+        border: `0.5px solid ${C.border}`,
+        borderRadius: 8,
+        background: C.layer1,
+        fontSize: 11,
+        color: C.muted,
+        flexWrap: 'wrap',
+      },
+      workspaceIcon: { display: 'inline-flex', flex: 'none', color: C.brand },
+      workspaceLabel: { fontSize: 11, color: C.muted },
+      workspaceRepo: { fontWeight: 600, color: C.text, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+      workspaceBranch: {
+        marginLeft: 'auto',
+        flex: 'none',
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+        fontSize: 10.5,
+        color: C.muted,
+      },
       filterBar: { display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', margin: '2px 0 6px' },
       filterSelect: {
         boxSizing: 'border-box',
@@ -1155,6 +1189,65 @@ window.__ModuleLoader__.load({
       )
     }
 
+    /**
+     * The repository the current session is working in.
+     *
+     * Shown above the composer so the project under the cursor is always named.
+     * A fork offers a choice between the shared repository it came from and the
+     * fork itself, because pull requests belong to the former.
+     */
+    function WorkspaceDock({ sessionId, t, onPick }) {
+      const [state, setState] = useState(null)
+      const [choice, setChoice] = useState(null)
+
+      useEffect(() => {
+        let alive = true
+        const query = sessionId === undefined || sessionId === null ? '' : `?session=${encodeURIComponent(sessionId)}`
+        callApi(`/workspace${query}`).then((result) => {
+          if (alive) setState(result?.ok === true ? result : { kind: 'none' })
+        })
+        return () => {
+          alive = false
+        }
+      }, [sessionId])
+
+      if (state === null || state.kind === 'none') return null
+
+      if (state.kind === 'other') {
+        return h(
+          'div',
+          { style: S.workspaceDock, 'data-atomgit-workspace': 'other' },
+          h('span', { style: S.workspaceLabel }, t('workspace.notAtomGit')),
+        )
+      }
+
+      const forks = state.isFork === true && state.forkedFrom !== null
+      const active = choice ?? state.primary
+
+      return h(
+        'div',
+        { style: S.workspaceDock, 'data-atomgit-workspace': state.kind },
+        h('span', { style: S.workspaceIcon }, h(GitGlyph, { size: 13 })),
+        forks
+          ? h(Segments, {
+              label: t('workspace.pick'),
+              value: active,
+              items: [
+                { value: state.primary, label: `${state.primary}` },
+                { value: state.own, label: `${state.own}（${t('workspace.fork')}）` },
+              ],
+              onChange: (value) => {
+                setChoice(value)
+                onPick(value)
+              },
+            })
+          : h('span', { style: S.workspaceRepo, 'data-atomgit-workspace-repo': active }, active),
+        state.branch === null
+          ? null
+          : h('span', { style: S.workspaceBranch }, state.branch),
+      )
+    }
+
     /** A read-only label chip, coloured by the label's own colour. */
     function LabelChip({ label }) {
       const color = /^#?[0-9a-fA-F]{3,8}$/.test(String(label.color ?? ''))
@@ -1242,6 +1335,7 @@ window.__ModuleLoader__.load({
         ),
         rule('r0'),
         entry('open', t('menu.open')),
+        menu.item.kind === 'pr' ? entry('pull', t('menu.pull')) : null,
         actions.length === 0
           ? null
           : h('span', { key: 'acts', style: { display: 'contents' } },
@@ -2261,6 +2355,7 @@ window.__ModuleLoader__.load({
     function Panel(props) {
       const t = props.t
       const openInBrowser = props.openInBrowser
+      const sessionId = props.sessionId ?? null
       const [meta, setMeta] = useState(null)
       const [snapshot, setSnapshot] = useState(null)
       const [loading, setLoading] = useState(false)
@@ -2362,6 +2457,8 @@ window.__ModuleLoader__.load({
       const [commentError, setCommentError] = useState(null)
 
       const [resolving, setResolving] = useState(null)
+      const [pulling, setPulling] = useState(null)
+      const [flashText, setFlashText] = useState(null)
       const [menu, setMenu] = useState(null)
 
 
@@ -2376,8 +2473,36 @@ window.__ModuleLoader__.load({
           await resolveItem(item)
           return
         }
+        if (id === 'pull') {
+          await pullPull(item)
+          return
+        }
         if (id.startsWith('action:')) {
           await runAction(item, id.slice('action:'.length))
+        }
+      }
+
+      /** Fetch the pull request's head into the session's working copy. */
+      const pullPull = async (item) => {
+        setCommentError(null)
+        setPulling(`${item.kind}:${item.number}`)
+        try {
+          const result = await postJson('/pull-checkout', {
+            repo: activeKey,
+            number: item.number,
+            session: sessionId ?? null,
+          })
+          if (result?.ok !== true) {
+            setCommentError(result?.error ?? { code: 'unknown', message: 'checkout failed' })
+            return
+          }
+          setFlashText(
+            t('menu.pulled')
+              .replace('{branch}', result.branch)
+              .replace('{source}', result.source),
+          )
+        } finally {
+          if (mounted.current) setPulling(null)
         }
       }
 
@@ -2491,6 +2616,7 @@ window.__ModuleLoader__.load({
           null,
           failed && snapshot?.error ? h(ErrorBox, { error: snapshot.error, t }) : null,
           commentError ? h(ErrorBox, { error: commentError, t }) : null,
+          flashText === null ? null : h('div', { style: S.noticeBox, role: 'status' }, flashText),
           h(
             'div',
             { style: S.stats },
@@ -2582,7 +2708,7 @@ window.__ModuleLoader__.load({
         h(RowMenu, {
           menu,
           actions: snapshot?.actions ?? [],
-          busy: commenting !== null || resolving !== null,
+          busy: commenting !== null || resolving !== null || pulling !== null,
           t,
           onSelect: runMenuEntry,
           onClose: () => setMenu(null),
@@ -2742,8 +2868,15 @@ window.__ModuleLoader__.load({
       ctx.effect(
         () =>
           ctx.slots.inject('sidebar.right.pane.tab', () =>
-            ctx.slots.register({ name: 'sidebar.right.pane.tab', key: TAB_ID, locale: NS }, (props) =>
-              h(Panel, { ...props, t, openInBrowser }),
+            ctx.slots.register(
+              {
+                name: 'sidebar.right.pane.tab',
+                key: TAB_ID,
+                locale: NS,
+                // The panel needs the session to read its working copy.
+                inject: (sessionId) => ({ sessionId }),
+              },
+              (props) => h(Panel, { ...props, t, openInBrowser }),
             ),
           ),
         'atomgit-panel: tab body',
@@ -2761,6 +2894,24 @@ window.__ModuleLoader__.load({
             ),
           ),
         'atomgit-panel: tab chip',
+      )
+
+      ctx.effect(
+        () =>
+          ctx.slots.inject('conversation.input.dock', () =>
+            ctx.slots.register(
+              {
+                name: 'conversation.input.dock',
+                id: 'atomgit-panel',
+                order: 20,
+                // The host hands the session id to this factory, not to the
+                // component, so the component receives it as a prop.
+                inject: (sessionId) => ({ sessionId }),
+              },
+              (props) => h(WorkspaceDock, { sessionId: props?.sessionId ?? null, t }),
+            ),
+          ),
+        'atomgit-panel: workspace dock',
       )
 
       ctx.effect(

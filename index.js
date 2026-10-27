@@ -20,7 +20,7 @@ import { join } from 'node:path'
 
 export const name = 'atomgit-panel'
 
-export const inject = ['webServer', 'tools']
+export const inject = ['webServer', 'tools', 'workingDirectory', 'subprocess', 'sessions']
 
 const API_BASE = '/api/dsh-atomgit-panel'
 const API_HOST = 'https://api.atomgit.com'
@@ -1189,6 +1189,256 @@ export function apply(ctx) {
     return { ok: true }
   }
 
+  /**
+   * Run one git command in a directory and return its trimmed stdout.
+   *
+   * argv is passed literally, so no shell interprets the directory path. A
+   * non-zero exit is reported as null rather than thrown: "not a git repository"
+   * is an ordinary answer here.
+   */
+  async function gitAt(cwd, argv) {
+    let handle
+    try {
+      handle = ctx.subprocess.spawn({
+        argv: ['git', ...argv],
+        cwd,
+        stdio: { stdin: 'ignore', stdout: { maxBytes: 64 * 1024 }, stderr: 'ignore' },
+        graceMs: 5000,
+      })
+    } catch {
+      return null
+    }
+    let exit
+    try {
+      exit = await handle.done
+    } catch {
+      return null
+    }
+    if (exit?.exitCode !== 0) return null
+    // `readFrom` answers { text, nextOffset, lossy }, not a bare string.
+    const chunk = handle.collected?.stdout?.readFrom(0)
+    const text = typeof chunk === 'string' ? chunk : chunk?.text
+    return typeof text === 'string' ? text.trim() : null
+  }
+
+  /** A git command that needs its exit status and both streams. */
+  async function gitAtAll(cwd, argv) {
+    let handle
+    try {
+      handle = ctx.subprocess.spawn({
+        argv: ['git', ...argv],
+        cwd,
+        stdio: { stdin: 'ignore', stdout: { maxBytes: 256 * 1024 }, stderr: { maxBytes: 64 * 1024 } },
+        graceMs: 30000,
+      })
+    } catch (error) {
+      return { exitCode: -1, stdout: '', stderr: String(error?.message ?? error) }
+    }
+    let exit
+    try {
+      exit = await handle.done
+    } catch (error) {
+      return { exitCode: -1, stdout: '', stderr: String(error?.message ?? error) }
+    }
+    const take = (stream) => {
+      const chunk = handle.collected?.[stream]?.readFrom(0)
+      const text = typeof chunk === 'string' ? chunk : chunk?.text
+      return typeof text === 'string' ? text : ''
+    }
+    return { exitCode: exit?.exitCode ?? -1, stdout: take('stdout'), stderr: take('stderr').trim() }
+  }
+
+  /**
+   * Read the tracking repository from one git remote URL.
+   *
+   * Both the https and the scp-like ssh spellings are accepted, and the host
+   * decides whether the project is hosted on AtomGit at all.
+   */
+  function remoteOf(url) {
+    const text = str(url, 400).trim()
+    if (text === '') return null
+    const https = /^(?:https?|git):\/\/(?:[^@/]+@)?([^/:]+)(?::\d+)?\/(.+)$/i.exec(text)
+    const ssh = /^(?:[^@]+@)?([^:]+):(.+)$/.exec(text)
+    const match = https ?? ssh
+    if (match === null) return null
+    const host = match[1].toLowerCase()
+    const path = match[2].replace(/\.git$/i, '').replace(/^\/+|\/+$/g, '')
+    const parts = path.split('/').filter((part) => part !== '')
+    if (parts.length < 2) return null
+    return { host, owner: parts[parts.length - 2], repo: parts[parts.length - 1] }
+  }
+
+  const ATOMGIT_HOSTS = new Set(['atomgit.com', 'gitcode.com', 'www.atomgit.com', 'www.gitcode.com'])
+
+  /**
+   * Describe the git repository a session is working in.
+   *
+   * Answers three questions the panel needs: does this directory belong to a git
+   * repository, is that repository hosted on AtomGit, and which project is the
+   * upstream of a fork.
+   */
+  async function workspaceOf(sessionId) {
+    let cwd = null
+    try {
+      // `get` reads a projection, so it needs the live Session, not its id.
+      const wanted = str(sessionId, 120).trim()
+      const session = wanted === '' ? undefined : ctx.sessions?.get(wanted)
+      if (session !== undefined && session !== null) cwd = ctx.workingDirectory.get(session)
+    } catch {
+      cwd = null
+    }
+    if (cwd === null) return { ok: true, kind: 'none' }
+
+    const root = await gitAt(cwd, ['rev-parse', '--show-toplevel'])
+    if (root === null) return { ok: true, kind: 'none', cwd }
+
+    const remotesRaw = await gitAt(root, ['config', '--get-regexp', '^remote\..*\.url$'])
+    const remotes = []
+    for (const line of (remotesRaw ?? '').split('\n')) {
+      const match = /^remote\.([^.]+)\.url\s+(.+)$/.exec(line.trim())
+      if (match === null) continue
+      const remote = remoteOf(match[2])
+      if (remote === null) continue
+      remotes.push({ name: match[1], ...remote, atomgit: ATOMGIT_HOSTS.has(remote.host) })
+    }
+
+    const hosted = remotes.filter((remote) => remote.atomgit)
+    if (hosted.length === 0) {
+      return { ok: true, kind: 'other', cwd, repositoryRoot: root, remotes }
+    }
+
+    const branch = await gitAt(root, ['rev-parse', '--abbrev-ref', 'HEAD'])
+    const upstream = await gitAt(root, ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'])
+    // A fork workflow tracks the shared repository through `upstream`; the fork
+    // itself is `origin`. Fall back in that order, then to whatever exists.
+    const preferred =
+      hosted.find((remote) => remote.name === 'upstream') ??
+      hosted.find((remote) => remote.name === 'origin') ??
+      hosted[0]
+
+    // `own` is what this working copy points at — the fork when there is one.
+    const origin = hosted.find((remote) => remote.name === 'origin') ?? preferred
+    const tracked = `${origin.owner}/${origin.repo}`
+    // A fork records where it came from; the shared repository is what pull
+    // requests target, so both are reported and the caller chooses.
+    let forkedFrom = null
+    try {
+      const raw = await requestJson(
+        `${API_HOST}/api/v5/repos/${tracked}`,
+        await readSecret(TOKEN_KEY),
+        AbortSignal.timeout(10000),
+      )
+      const record = asRecord(raw)
+      if (record?.fork === true) {
+        forkedFrom = str(record.parentfull_name, 250) || str(asRecord(record.parent)?.full_name, 250) || null
+      }
+    } catch {
+      /* an unread permission on the project is not a failure of detection */
+    }
+
+    return {
+      ok: true,
+      kind: 'atomgit',
+      cwd,
+      repositoryRoot: root,
+      branch: branch === 'HEAD' ? null : branch,
+      upstream: upstream === null ? null : upstream.split('/')[0],
+      remotes,
+      // `own` is the repository this working copy points at; `primary` is where
+      // its pull requests belong — the parent when this is a fork.
+      own: tracked,
+      isFork: forkedFrom !== null,
+      forkedFrom,
+      primary: forkedFrom ?? tracked,
+      remoteName: preferred.name,
+    }
+  }
+
+  /**
+   * Check out a pull request's head branch in the session's working copy.
+   *
+   * The head may live in another project (a fork), so the branch is fetched from
+   * wherever the pull request says it comes from, then checked out locally. A
+   * dirty tree is refused rather than stashed: this must never discard work.
+   */
+  async function checkoutPull(entry, sessionId, number) {
+    const wanted = Number(number)
+    if (!Number.isFinite(wanted) || wanted <= 0) {
+      return { ok: false, error: { code: 'bad-number', message: 'number must be a positive integer.' } }
+    }
+    const token = await readSecret(TOKEN_KEY)
+    if (token === null) {
+      return { ok: false, error: { code: 'unauthorized', message: 'Sign in before pulling a pull request.' } }
+    }
+
+    // Where the session works, and which project it points at.
+    const workspace = await workspaceOf(sessionId)
+    if (workspace.kind !== 'atomgit') {
+      return { ok: false, error: { code: 'no-workspace', message: 'This session is not inside an AtomGit working copy.' } }
+    }
+    const root = workspace.repositoryRoot
+
+    // Never move a working copy that has changes or is mid-operation.
+    const status = await gitAt(root, ['status', '--porcelain=v2', '--branch'])
+    const dirty = (status ?? '')
+      .split('\n')
+      .filter((line) => line !== '' && !line.startsWith('#'))
+    if (dirty.length > 0) {
+      return {
+        ok: false,
+        error: { code: 'dirty', message: `${dirty.length} uncommitted change(s) in ${root}; commit or stash them first.` },
+      }
+    }
+    // The pull request itself supplies the source project and branch.
+    let pull
+    try {
+      pull = asRecord(
+        await requestJson(repoUrl(entry.owner, entry.repo, `/pulls/${wanted}`), token, AbortSignal.timeout(REQUEST_TIMEOUT_MS)),
+      )
+    } catch (error) {
+      return { ok: false, error: { code: 'read-failed', message: errorText(error) } }
+    }
+    const head = asRecord(pull?.head)
+    const ref = str(head?.ref, 200)
+    if (ref === '') {
+      return { ok: false, error: { code: 'no-head', message: 'The pull request reports no source branch.' } }
+    }
+    const headRepo = str(asRecord(head?.repo)?.full_name, 250)
+    const sameProject = headRepo === '' || headRepo === `${entry.owner}/${entry.repo}`
+    const fetchUrl = sameProject
+      ? repoUrl(entry.owner, entry.repo, '').replace(/\/$/, '.git')
+      : `https://atomgit.com/${headRepo}.git`
+
+    // Fetch by URL: no remote is added, and FETCH_HEAD names exactly this branch.
+    const fetched = await gitAtAll(root, ['fetch', '--no-tags', fetchUrl, ref])
+    if (fetched.exitCode !== 0) {
+      return {
+        ok: false,
+        error: { code: 'fetch-failed', message: fetched.stderr || 'git fetch failed.' },
+      }
+    }
+    const sha = (await gitAt(root, ['rev-parse', 'FETCH_HEAD'])) ?? ''
+    if (sha === '') {
+      return { ok: false, error: { code: 'no-sha', message: 'The fetched branch resolved no commit.' } }
+    }
+
+    // A local branch of the same name is reused when it already points here.
+    const branch = `pr-${wanted}`
+    const created = await gitAtAll(root, ['checkout', '-B', branch, sha])
+    if (created.exitCode !== 0) {
+      return { ok: false, error: { code: 'checkout-failed', message: created.stderr || 'git checkout failed.' } }
+    }
+
+    return {
+      ok: true,
+      number: wanted,
+      branch,
+      sha,
+      source: headRepo === '' ? `${entry.owner}/${entry.repo}` : headRepo,
+      sourceBranch: ref,
+    }
+  }
+
   /** The address AtomGit redirects back to. */
   function callbackUrl() {
     if (callbackPort !== null) return `http://127.0.0.1:${callbackPort}${CALLBACK_PATH}`
@@ -1671,6 +1921,22 @@ export function apply(ctx) {
         if (method === 'POST' && path === '/repos/active') {
           const body = await readJson(req)
           sendJson(res, 200, await setActive(body.repo === null ? null : body.repo))
+          return
+        }
+
+        if (method === 'POST' && path === '/pull-checkout') {
+          const body = await readJson(req)
+          const entry = resolveRepo(str(body.repo, 250) || null)
+          if (entry === null) {
+            sendJson(res, 200, { ok: false, error: { code: 'no-repository', message: 'No watched repository is selected.' } })
+            return
+          }
+          sendJson(res, 200, await checkoutPull(entry, str(body.session, 120) || null, Number(body.number)))
+          return
+        }
+
+        if (method === 'GET' && path === '/workspace') {
+          sendJson(res, 200, await workspaceOf(str(url.searchParams.get('session'), 120) || null))
           return
         }
 
